@@ -5,3 +5,6 @@ pydantic==2.14.1
 pydantic-settings==2.16.1
 # Timezone data for zoneinfo on Windows (no-op on Linux/macOS).
 tzdata>=2024.1
+# AI parsing: Groq's official SDK and fast fuzzy string matching for customer names.
+groq==1.7.0
+rapidfuzz==3.14.6

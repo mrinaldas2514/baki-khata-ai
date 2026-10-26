@@ -1,0 +1,245 @@
+{
+  "description": "Example shopkeeper sentences with the entry a correct parser should produce. customer_name is compared after removing honorifics and ignoring case; item is compared loosely (same goods). Grow this set into an accuracy evaluation.",
+  "sentences": [
+    {
+      "id": 1,
+      "text": "rahim bhai 2 kg chal 120 taka baki",
+      "language": "banglish",
+      "note": "honorific, quantity before amount",
+      "expected": {
+        "customer_name": "rahim",
+        "amount": 120,
+        "type": "credit",
+        "item": "2 kg chal"
+      }
+    },
+    {
+      "id": 2,
+      "text": "karim 500 dilo",
+      "language": "banglish",
+      "note": "shortest payment",
+      "expected": {
+        "customer_name": "karim",
+        "amount": 500,
+        "type": "payment",
+        "item": null
+      }
+    },
+    {
+      "id": 3,
+      "text": "salma apa pach sho taka baki, dal r tel",
+      "language": "banglish",
+      "note": "number words, two items joined by r",
+      "expected": {
+        "customer_name": "salma",
+        "amount": 500,
+        "type": "credit",
+        "item": "dal, tel"
+      }
+    },
+    {
+      "id": 4,
+      "text": "রহিম ২০০ টাকা দিল",
+      "language": "bangla",
+      "note": "Bangla script and digits",
+      "expected": {
+        "customer_name": "রহিম",
+        "amount": 200,
+        "type": "payment",
+        "item": null
+      }
+    },
+    {
+      "id": 5,
+      "text": "jasim kaka dedh hajar joma dilo",
+      "language": "banglish",
+      "note": "dedh hajar = 1500",
+      "expected": {
+        "customer_name": "jasim",
+        "amount": 1500,
+        "type": "payment",
+        "item": null
+      }
+    },
+    {
+      "id": 6,
+      "text": "Shopon 5 liter tel 850 tk baki",
+      "language": "banglish",
+      "note": "tk abbreviation",
+      "expected": {
+        "customer_name": "Shopon",
+        "amount": 850,
+        "type": "credit",
+        "item": "5 liter tel"
+      }
+    },
+    {
+      "id": 7,
+      "text": "Mr. Hasan paid 300 taka today",
+      "language": "english",
+      "note": "English with title",
+      "expected": {
+        "customer_name": "Hasan",
+        "amount": 300,
+        "type": "payment",
+        "item": null
+      }
+    },
+    {
+      "id": 8,
+      "text": "কামাল ভাই দেড় হাজার টাকার চাল নিলো",
+      "language": "bangla",
+      "note": "Bangla number words",
+      "expected": {
+        "customer_name": "কামাল",
+        "amount": 1500,
+        "type": "credit",
+        "item": "চাল"
+      }
+    },
+    {
+      "id": 9,
+      "text": "ruma di arai sho taka baki rakhlo, 1 packet dudh",
+      "language": "banglish",
+      "note": "arai sho = 250",
+      "expected": {
+        "customer_name": "ruma",
+        "amount": 250,
+        "type": "credit",
+        "item": "1 packet dudh"
+      }
+    },
+    {
+      "id": 10,
+      "text": "Nasir ২৫০ taka dise",
+      "language": "mixed",
+      "note": "Bangla digits inside Banglish",
+      "expected": {
+        "customer_name": "Nasir",
+        "amount": 250,
+        "type": "payment",
+        "item": null
+      }
+    },
+    {
+      "id": 11,
+      "text": "polash 1 dozen dim r 2 ta pauruti 180 baki",
+      "language": "banglish",
+      "note": "several quantities, one amount",
+      "expected": {
+        "customer_name": "polash",
+        "amount": 180,
+        "type": "credit",
+        "item": "1 dozen dim, 2 ta pauruti"
+      }
+    },
+    {
+      "id": 12,
+      "text": "shefali boudi sare tin sho taka shodh korlo",
+      "language": "banglish",
+      "note": "sare tin sho = 350",
+      "expected": {
+        "customer_name": "shefali",
+        "amount": 350,
+        "type": "payment",
+        "item": null
+      }
+    },
+    {
+      "id": 13,
+      "text": "Abul 2,500 tk jama",
+      "language": "banglish",
+      "note": "thousands separator",
+      "expected": {
+        "customer_name": "Abul",
+        "amount": 2500,
+        "type": "payment",
+        "item": null
+      }
+    },
+    {
+      "id": 14,
+      "text": "Monir bhai took 1 kg sugar for 140",
+      "language": "mixed",
+      "note": "English verb, Banglish honorific",
+      "expected": {
+        "customer_name": "Monir",
+        "amount": 140,
+        "type": "credit",
+        "item": "1 kg sugar"
+      }
+    },
+    {
+      "id": 15,
+      "text": "আয়েশা আপা পাঁচশো টাকা জমা দিলেন",
+      "language": "bangla",
+      "note": "joined number word পাঁচশো",
+      "expected": {
+        "customer_name": "আয়েশা",
+        "amount": 500,
+        "type": "payment",
+        "item": null
+      }
+    },
+    {
+      "id": 16,
+      "text": "tuhin dui hajar taka nilo",
+      "language": "banglish",
+      "note": "cash taken on credit, no goods",
+      "expected": {
+        "customer_name": "tuhin",
+        "amount": 2000,
+        "type": "credit",
+        "item": null
+      }
+    },
+    {
+      "id": 17,
+      "text": "selim mama 3 ta sabun 105 taka",
+      "language": "banglish",
+      "note": "goods without a baki word are credit",
+      "expected": {
+        "customer_name": "selim",
+        "amount": 105,
+        "type": "credit",
+        "item": "3 ta sabun"
+      }
+    },
+    {
+      "id": 18,
+      "text": "Rina gave 1000 rupees",
+      "language": "english",
+      "note": "rupees (India)",
+      "expected": {
+        "customer_name": "Rina",
+        "amount": 1000,
+        "type": "payment",
+        "item": null
+      }
+    },
+    {
+      "id": 19,
+      "text": "জাকির ৭৫০ টাকা বাকি, সিগারেট",
+      "language": "bangla",
+      "note": "item after the amount",
+      "expected": {
+        "customer_name": "জাকির",
+        "amount": 750,
+        "type": "credit",
+        "item": "সিগারেট"
+      }
+    },
+    {
+      "id": 20,
+      "text": "babu da ek hajar pach sho baki, gas cylinder",
+      "language": "banglish",
+      "note": "compound number ek hajar pach sho",
+      "expected": {
+        "customer_name": "babu",
+        "amount": 1500,
+        "type": "credit",
+        "item": "gas cylinder"
+      }
+    }
+  ]
+}

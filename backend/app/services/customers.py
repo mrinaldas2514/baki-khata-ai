@@ -21,12 +21,19 @@ def to_customer_read(customer: Customer, balance: int) -> CustomerRead:
 
 
 def create_customer(db: Session, shop_id: int, data: CustomerCreate) -> Customer:
+    customer = add_customer(db, shop_id, data)
+    db.commit()
+    db.refresh(customer)
+    return customer
+
+
+def add_customer(db: Session, shop_id: int, data: CustomerCreate) -> Customer:
+    """Validate and add a customer to the session without committing."""
     get_shop(db, shop_id)
     _ensure_not_duplicate(db, shop_id, data.name, data.note)
     customer = Customer(shop_id=shop_id, **data.model_dump())
     db.add(customer)
-    db.commit()
-    db.refresh(customer)
+    db.flush()
     return customer
 
 
