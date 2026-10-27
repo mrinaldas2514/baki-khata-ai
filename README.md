@@ -3,9 +3,129 @@
 A mobile-first app for small shopkeepers in Bangladesh and India to track customer
 credit (*baki*) by typing or speaking Banglish instead of writing in a paper ledger.
 
-This repository currently contains the **backend**: a REST API built with FastAPI,
-SQLAlchemy and Pydantic, plus an **AI parsing layer** that turns one free-form sentence
-("rahim bhai 2 kg chal 120 taka baki") into a transaction preview. There's no frontend yet.
+This repository contains:
+
+- a **backend**: a REST API built with FastAPI, SQLAlchemy and Pydantic, plus an **AI parsing
+  layer** that turns one free-form sentence ("rahim bhai 2 kg chal 120 taka baki") into a
+  transaction preview;
+- a **frontend**: a mobile-first React app with one screen. Type a sentence, check the
+  confirmation card, save.
+
+## How it works
+
+The whole app is one screen, made for a busy shopkeeper on a cheap Android phone.
+
+1. **Write.** A big box asks *"Ki hisab likhben?"* ("What do you want to note?"). The
+   shopkeeper types one sentence the way they'd say it: `salma apa pach sho taka baki, dal r tel`.
+   Below the box are the shop's last 10 entries.
+2. **Check.** After *Hisab korun*, a loading message shows while the backend reads the
+   sentence (`POST /shops/{id}/parse`, which saves nothing). Then a **confirmation card**
+   shows what it understood: the amount in big type (৳500), whether it's **Baki** (red/orange:
+   the customer took goods on credit) or **Joma** (green: the customer paid), the item, and the
+   customer:
+   - **matched**: the customer's name and current balance ("Ekhon: Baki ৳200");
+   - **two or more fit** (e.g. two Rahims): each one as a big button with their area/note and
+     balance, plus *Notun customer*. Saving waits until the shopkeeper picks one;
+   - **new**: "Notun customer: Tanvir", so nobody is created by surprise.
+3. **Fix (optional).** *Thik kore din* opens a form to correct the name, amount, type and item.
+   Typing a name shows matching customers to pick from; any other name becomes a new customer.
+4. **Save.** *Save korun* calls `POST /shops/{id}/parse/confirm`. A success message shows the
+   customer's new balance and the entry appears at the top of the list. *Bad din* (cancel)
+   goes back to the box with the sentence still there.
+
+If something goes wrong (no internet, the AI is down or gives a bad answer, the sentence has no
+name or amount) the app says so in plain words and opens the same form empty, so the shopkeeper
+can still write the entry by hand. If the AI isn't sure (confidence below 0.6), its guess opens
+in the form to be checked instead of in the confirmation card. The original sentence is always
+saved as `raw_text`.
+
+## Running it locally (macOS, step by step)
+
+You need two terminal windows: one for the backend, one for the frontend. No API key is needed:
+without one, the backend uses a simple rule-based parser instead of the AI (see
+[Demo mode](#demo-mode-without-an-api-key)).
+
+### 1. Install the tools (once)
+
+1. Open **Terminal** (press ⌘ Space, type "Terminal", press Enter).
+2. Install [Homebrew](https://brew.sh) if you don't have it: paste the command shown on
+   brew.sh into Terminal and follow the instructions.
+3. Install Python and Node.js:
+
+   ```bash
+   brew install python@3.13 node
+   ```
+
+4. Check that both work (any Python 3.11+ and Node 22.12+ is fine):
+
+   ```bash
+   python3 --version
+   node --version
+   ```
+
+5. Get the code, if you haven't yet:
+
+   ```bash
+   git clone https://github.com/mrinaldas2514/baki-khata-ai.git
+   cd baki-khata-ai
+   ```
+
+### 2. Start the backend (terminal window 1)
+
+```bash
+cd backend
+python3 -m venv .venv                 # a private Python environment for this project (once)
+source .venv/bin/activate             # run this every time you open a new terminal
+pip install -r requirements-dev.txt   # once, and again when requirements change
+cp .env.example .env                  # once; edit .env to add a GROQ_API_KEY if you have one
+python -m app.seed                    # once: creates the demo shop, prints its id (1)
+uvicorn app.main:app --reload
+```
+
+Leave this window open. The API runs at http://localhost:8000 (API docs at
+http://localhost:8000/docs). Stop it with Ctrl+C.
+
+### 3. Start the frontend (terminal window 2)
+
+Open a new Terminal window (⌘ N), go to the project folder again, then:
+
+```bash
+cd frontend
+npm install            # once, and again when package.json changes
+cp .env.example .env   # once; VITE_SHOP_ID must match the id the seed script printed
+npm run dev
+```
+
+Open http://localhost:5173 in your browser. To see it the way a phone does, open Chrome's
+developer tools (⌥ ⌘ I) and switch on the device toolbar (⇧ ⌘ M).
+
+Try:
+
+- `salma apa pach sho taka baki, dal r tel`: matched customer
+- `rahim 100 taka baki`: two Rahims, pick one
+- `tanvir 90 taka baki`: new customer
+- `মিজান কাকা ৩৫০ টাকার চিনি আর আটা নিল`: Bangla script
+- `rina 2 ta saban`: no amount, so the manual form opens
+
+**Start over with fresh demo data:** stop the backend, run `python -m app.seed --reset`, start it again.
+
+**Try it on your phone:** connect the phone to the same Wi-Fi as the Mac and find the Mac's IP
+address (System Settings → Wi-Fi → Details, e.g. `192.168.0.5`). Then:
+
+1. In `backend/.env`, set `CORS_ORIGINS=http://localhost:5173,http://192.168.0.5:5173` and start
+   the backend with `uvicorn app.main:app --reload --host 0.0.0.0`.
+2. In `frontend/.env`, set `VITE_API_URL=http://192.168.0.5:8000` and start the frontend with
+   `npm run dev -- --host`.
+3. Open `http://192.168.0.5:5173` on the phone.
+
+### Common problems
+
+| You see | Fix |
+|---|---|
+| "Internet ba server-e somossa" | The backend isn't running, or `VITE_API_URL` in `frontend/.env` is wrong. Restart `npm run dev` after editing `.env`. |
+| "Dokan pawa jayni" | No demo shop. Run `python -m app.seed` in `backend/` and check `VITE_SHOP_ID`. |
+| A CORS error in the browser console | Add the address in the browser's address bar to `CORS_ORIGINS` in `backend/.env` (no trailing `/`) and restart the backend. |
+| `command not found: uvicorn` | Run `source .venv/bin/activate` in `backend/` first. |
 
 ## Project structure
 
@@ -16,7 +136,7 @@ backend/
 │   ├── config.py        # Settings from environment variables / .env
 │   ├── database.py      # Engine + per-request session
 │   ├── time_utils.py    # UTC / shop-local-time helpers
-│   ├── llm/             # LLM interface + Groq implementation (swap providers here)
+│   ├── llm/             # LLM interface, Groq client, rule-based demo parser
 │   ├── models/          # SQLAlchemy tables: Shop, Customer, Transaction
 │   ├── schemas/         # Pydantic request/response models and validation
 │   ├── routers/         # HTTP endpoints (thin, just call services)
@@ -24,9 +144,19 @@ backend/
 │                        #   parsing, parse_prompt, number_words, name_matching)
 ├── tests/               # pytest suite (the LLM is always faked)
 │   └── fixtures/eval_sentences.json   # example sentences + expected output
+├── app/seed.py          # demo shop: python -m app.seed
 ├── requirements.txt
 ├── requirements-dev.txt
 ├── pyproject.toml       # pytest config
+└── .env.example
+frontend/                # React + Vite + TypeScript + Tailwind
+├── src/
+│   ├── App.tsx          # the one screen and its steps (entry → confirm/edit → saved)
+│   ├── strings.ts       # every UI text, in Banglish (add a Bangla/English set here later)
+│   ├── config.ts        # VITE_API_URL, VITE_SHOP_ID
+│   ├── api/             # fetch client and the backend's JSON types
+│   ├── components/      # SmartEntry, ConfirmationCard, EntryForm, RecentTransactions...
+│   └── test/            # test setup and the fetch mock
 └── .env.example
 ```
 
@@ -100,6 +230,7 @@ Interactive docs are available at `http://localhost:8000/docs` once the server i
 | GET | `/shops/{shop_id}/customers/{customer_id}` | Get one customer with current balance |
 | POST | `/shops/{shop_id}/customers/{customer_id}/transactions` | Create a transaction (response includes the new balance) |
 | GET | `/shops/{shop_id}/customers/{customer_id}/transactions` | Customer ledger with running balance |
+| GET | `/shops/{shop_id}/transactions?limit=10` | The shop's latest transactions (all customers), newest first, with customer name and note |
 | GET | `/shops/{shop_id}/transactions/{transaction_id}` | Get one transaction |
 | PATCH | `/shops/{shop_id}/transactions/{transaction_id}` | Edit a transaction (only the fields you send) |
 | DELETE | `/shops/{shop_id}/transactions/{transaction_id}` | Delete a transaction (204) |
@@ -132,7 +263,8 @@ curl -X POST localhost:8000/shops/1/customers/1/transactions \
 
 ## Running the backend locally
 
-Requires Python 3.11+ (developed on 3.13).
+Step-by-step instructions for macOS are in [Running it locally](#running-it-locally-macos-step-by-step).
+In short, with Python 3.11+ (developed on 3.13):
 
 ```bash
 cd backend
@@ -158,7 +290,9 @@ Don't commit `.env`; it's already in `.gitignore`.
 | `APP_NAME` | `Baki Khata AI` | Shown in the API docs |
 | `ENVIRONMENT` | `development` | Free-form environment label |
 | `SQL_ECHO` | `false` | Log SQL statements |
-| `GROQ_API_KEY` | *(empty)* | Groq API key for AI parsing. Without it, `/parse` returns 503 and everything else works |
+| `CORS_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | Comma-separated browser origins allowed to call the API (the frontend) |
+| `LLM_PROVIDER` | `auto` | `auto`: Groq when `GROQ_API_KEY` is set, otherwise the rule-based demo parser. `groq`: always Groq (503 without a key). `fake`: always the demo parser |
+| `GROQ_API_KEY` | *(empty)* | Groq API key for AI parsing |
 | `GROQ_MODEL` | `llama-3.3-70b-versatile` | Groq chat model; must support JSON mode |
 | `LLM_TIMEOUT_SECONDS` | `20` | How long to wait for the model |
 
@@ -171,6 +305,26 @@ pip install "psycopg[binary]"
 # in .env
 DATABASE_URL=postgresql+psycopg://user:password@localhost:5432/baki_khata
 ```
+
+### Frontend configuration
+
+From `frontend/.env` (see `frontend/.env.example`). Vite reads it when `npm run dev` starts.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `VITE_API_URL` | `http://localhost:8000` | Where the backend runs |
+| `VITE_SHOP_ID` | `1` | The shop to use (there's no login yet) |
+
+### Demo mode without an API key
+
+With `LLM_PROVIDER=fake`, or `auto` and no `GROQ_API_KEY`, `/parse` uses a small rule-based
+parser (`app/llm/rule_based.py`) instead of the AI. It plugs in behind the same `LLMClient`
+interface, so number normalization, validation, the sanity check and customer name matching all
+run exactly as with the real model. It's good enough to demo the app (it gets the 20 evaluation
+sentences right): the name is the first word, the amount is the number next to "taka" (or the
+one that isn't a quantity like "2 kg"), and the type comes from words like baki/nilo vs.
+dilo/joma/shodh. Anything less regular needs the real model; the backend logs a warning at the
+first parse so it's clear which one is running.
 
 ### Setting up Groq (AI parsing)
 
@@ -311,15 +465,15 @@ It returns `201` with the saved `transaction` (including `raw_text` and the new 
 commit: if the name clashes with an existing customer (409), nothing is saved.
 
 **Errors**: `422` the sentence has no name/amount, or invalid input; `502` the model gave an
-invalid answer twice; `503` no `GROQ_API_KEY`, or Groq is unreachable / rejected the
-request (details are logged, not returned).
+invalid answer twice; `503` `LLM_PROVIDER=groq` without a `GROQ_API_KEY`, or Groq is
+unreachable / rejected the request (details are logged, not returned).
 
 ### Swapping the LLM provider
 
 Everything outside `app/llm/` depends only on the `LLMClient` interface in
 `app/llm/base.py`: one method, `complete_json(messages) -> str`. To use another provider,
 add a class with that method and return it from `build_llm_client()` in
-`app/llm/__init__.py`.
+`app/llm/__init__.py` (that's how the rule-based demo parser plugs in too).
 
 ### Evaluation sentences
 
@@ -336,6 +490,18 @@ cd backend
 pytest
 ```
 
+```bash
+cd frontend
+npm test            # Vitest + React Testing Library (npm run test:watch to re-run on save)
+npm run typecheck   # TypeScript
+npm run lint        # oxlint
+npm run format      # Prettier
+```
+
+The frontend tests drive the real screen with the backend mocked (`src/test/mockApi.ts`
+replaces `fetch`): the confirmation card for a matched, fuzzy, ambiguous and new customer, edit
+mode, saving, and every error falling back to manual entry.
+
 The tests never call Groq and need no API key: the LLM is replaced by a fake that returns
 scripted answers (`FakeLLM` in `tests/conftest.py`).
 
@@ -351,7 +517,11 @@ TEST_DATABASE_URL=postgresql+psycopg://user:password@localhost:5432/baki_test py
 - Alembic migrations (tables are currently created with `create_all` on startup)
 - Authentication: one login per shop, and taking `shop_id` from the token instead of the URL
 - Pagination for long customer ledgers
-- Voice input (speech-to-text in front of `/parse`)
+- Voice input (speech-to-text in front of `/parse`). The entry box is ready for it:
+  `SmartEntry` takes an `actions` slot for a mic button and its text is controlled by `App`,
+  so a transcript can fill the box like typing does
+- A Bangla-script / English switch for the UI (all texts are in `frontend/src/strings.ts`)
 - An accuracy script that runs `eval_sentences.json` against the real model
 - Store the AI's original parse next to the confirmed values, to measure how often shopkeepers correct it
-- Mobile frontend
+- Customer list and per-customer ledger screens in the frontend
+- Offline support (queue entries while the phone has no internet)
