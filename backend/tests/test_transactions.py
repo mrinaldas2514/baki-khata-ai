@@ -248,3 +248,45 @@ def test_cannot_touch_transaction_through_another_shop(client, customer, add_txn
     assert client.get(url).status_code == 404
     assert client.patch(url, json={"amount": 1}).status_code == 404
     assert client.delete(url).status_code == 404
+
+
+# --- Recent transactions (whole shop) ------------------------------------------------------
+
+
+def test_recent_transactions_newest_first_with_customer_name(client, shop, make_customer, add_txn):
+    rahim = make_customer("Rahim", note="Bazar road")
+    salma = make_customer("Salma")
+    now = datetime.now(UTC)
+    add_txn(rahim["id"], "credit", 100, created_at=(now - timedelta(days=2)).isoformat())
+    yesterday = (now - timedelta(days=1)).isoformat()
+    add_txn(salma["id"], "credit", 200, item="dal", created_at=yesterday)
+    add_txn(rahim["id"], "payment", 50)
+
+    response = client.get(f"/shops/{shop['id']}/transactions")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert [(t["customer_name"], t["amount"]) for t in body] == [
+        ("Rahim", 50),
+        ("Salma", 200),
+        ("Rahim", 100),
+    ]
+    assert body[0]["customer_note"] == "Bazar road"
+    assert body[1]["item"] == "dal"
+
+
+def test_recent_transactions_limit(client, shop, customer, add_txn):
+    for amount in range(1, 13):
+        add_txn(customer["id"], "credit", amount)
+    url = f"/shops/{shop['id']}/transactions"
+    assert len(client.get(url).json()) == 10  # default
+    assert [t["amount"] for t in client.get(url, params={"limit": 3}).json()] == [12, 11, 10]
+    assert client.get(url, params={"limit": 0}).status_code == 422
+    assert client.get(url, params={"limit": 101}).status_code == 422
+
+
+def test_recent_transactions_only_this_shop(client, shop, customer, add_txn):
+    add_txn(customer["id"], "credit", 100)
+    other = client.post("/shops", json={"name": "Other", "owner_name": "X"}).json()
+    assert client.get(f"/shops/{other['id']}/transactions").json() == []
+    assert client.get("/shops/999/transactions").status_code == 404

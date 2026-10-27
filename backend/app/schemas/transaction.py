@@ -54,6 +54,11 @@ class TransactionWithBalance(TransactionRead):
     customer_balance: int = Field(description="Customer's balance after this change")
 
 
+class RecentTransaction(TransactionRead):
+    customer_name: str
+    customer_note: str | None
+
+
 class LedgerEntry(TransactionRead):
     running_balance: int = Field(description="Customer's balance right after this transaction")
 

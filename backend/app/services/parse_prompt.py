@@ -55,8 +55,17 @@ Your answer could not be used: {problem}
 Reply again with ONLY the JSON object in the required format."""
 
 
+_SENTENCE = "Sentence: "
+_NORMALIZED = "\nSame sentence with numbers written as digits: "
+
+
 def user_prompt(raw_text: str, normalized_text: str) -> str:
-    prompt = f"Sentence: {raw_text}"
+    prompt = f"{_SENTENCE}{raw_text}"
     if normalized_text != raw_text:
-        prompt += f"\nSame sentence with numbers written as digits: {normalized_text}"
+        prompt += f"{_NORMALIZED}{normalized_text}"
     return prompt
+
+
+def sentence_from_user_prompt(prompt: str) -> str:
+    """The original sentence back out of `user_prompt` (used by the rule-based demo parser)."""
+    return prompt.removeprefix(_SENTENCE).split(_NORMALIZED, 1)[0]

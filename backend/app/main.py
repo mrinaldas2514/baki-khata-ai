@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import Engine
 from sqlalchemy.orm import sessionmaker
@@ -34,6 +35,14 @@ def create_app(engine: Engine | None = None, llm_client: LLMClient | None = None
     app.state.session_factory = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
     # None means "build the configured provider on first use" (see app.llm.get_llm_client).
     app.state.llm_client = llm_client
+
+    # Lets the frontend (a different origin in development) call the API from the browser.
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     app.include_router(shops.router)
     app.include_router(customers.router)

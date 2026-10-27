@@ -1,0 +1,69 @@
+"""App-level wiring: CORS for the frontend and the demo seed script."""
+
+from fastapi.testclient import TestClient
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
+
+from app.config import Settings
+from app.main import create_app
+from app.models import Customer, Shop, Transaction
+from app.seed import CUSTOMERS, TRANSACTIONS, seed
+
+
+def test_cors_allows_the_configured_frontend_origin(client):
+    response = client.options(
+        "/health",
+        headers={"Origin": "http://localhost:5173", "Access-Control-Request-Method": "POST"},
+    )
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
+
+
+def test_cors_rejects_other_origins(client):
+    response = client.get("/health", headers={"Origin": "https://evil.example"})
+    assert "access-control-allow-origin" not in response.headers
+
+
+def test_cors_origins_come_from_env(engine, monkeypatch):
+    monkeypatch.setenv("CORS_ORIGINS", "http://192.168.0.5:5173/, https://app.example ")
+    settings = Settings(_env_file=None)
+    assert settings.cors_origins == ["http://192.168.0.5:5173", "https://app.example"]
+    monkeypatch.setattr("app.main.get_settings", lambda: settings)
+    with TestClient(create_app(engine)) as client:
+        response = client.get("/health", headers={"Origin": "https://app.example"})
+    assert response.headers["access-control-allow-origin"] == "https://app.example"
+
+
+def test_seed_creates_demo_shop_once(db: Session):
+    shop = seed(db)
+    assert db.scalar(select(func.count()).select_from(Customer)) == len(CUSTOMERS)
+    assert db.scalar(select(func.count()).select_from(Transaction)) == len(TRANSACTIONS)
+
+    assert seed(db).id == shop.id  # running it again changes nothing
+    assert db.scalar(select(func.count()).select_from(Shop)) == 1
+    assert db.scalar(select(func.count()).select_from(Transaction)) == len(TRANSACTIONS)
+
+
+def test_seed_reset_recreates_demo_shop(db: Session):
+    seed(db)
+    seed(db, reset=True)
+    assert db.scalar(select(func.count()).select_from(Shop)) == 1
+    assert db.scalar(select(func.count()).select_from(Customer)) == len(CUSTOMERS)
+    assert db.scalar(select(func.count()).select_from(Transaction)) == len(TRANSACTIONS)
+
+
+def test_seeded_shop_works_with_the_demo_parser(engine, monkeypatch):
+    """End to end without an API key: seed, then parse with LLM_PROVIDER=fake."""
+    with Session(engine, expire_on_commit=False) as db:
+        shop_id = seed(db).id
+    monkeypatch.setattr(
+        "app.llm.get_settings", lambda: Settings(_env_file=None, llm_provider="fake")
+    )
+    with TestClient(create_app(engine)) as client:
+        rahim = client.post(f"/shops/{shop_id}/parse", json={"text": "rahim 100 taka baki"})
+        salma = client.post(f"/shops/{shop_id}/parse", json={"text": "salma apa 200 dilo"})
+        new = client.post(f"/shops/{shop_id}/parse", json={"text": "Tanvir 90 taka baki"})
+    assert rahim.json()["match"]["status"] == "ambiguous"  # two Rahims in the demo shop
+    assert salma.json()["match"]["status"] == "exact"
+    assert salma.json()["match"]["customer"]["balance"] == 200
+    assert new.json()["match"]["status"] == "new"

@@ -5,6 +5,7 @@ from app.models import Customer, Transaction
 from app.schemas import (
     CustomerLedger,
     LedgerEntry,
+    RecentTransaction,
     TransactionCreate,
     TransactionRead,
     TransactionUpdate,
@@ -72,6 +73,26 @@ def delete_transaction(db: Session, shop_id: int, transaction_id: int) -> None:
     txn = get_transaction(db, shop_id, transaction_id)
     db.delete(txn)
     db.commit()
+
+
+def list_recent_transactions(db: Session, shop_id: int, limit: int) -> list[RecentTransaction]:
+    """The shop's latest transactions across all customers, newest first."""
+    get_shop(db, shop_id)
+    stmt = (
+        select(Transaction, Customer.name, Customer.note)
+        .join(Customer, Customer.id == Transaction.customer_id)
+        .where(Transaction.shop_id == shop_id)
+        .order_by(Transaction.created_at.desc(), Transaction.id.desc())
+        .limit(limit)
+    )
+    return [
+        RecentTransaction(
+            **TransactionRead.model_validate(txn).model_dump(),
+            customer_name=name,
+            customer_note=note,
+        )
+        for txn, name, note in db.execute(stmt)
+    ]
 
 
 def get_customer_ledger(db: Session, shop_id: int, customer_id: int) -> CustomerLedger:

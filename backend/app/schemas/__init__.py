@@ -13,6 +13,7 @@ from app.schemas.shop import ShopCreate, ShopRead
 from app.schemas.transaction import (
     CustomerLedger,
     LedgerEntry,
+    RecentTransaction,
     TransactionCreate,
     TransactionRead,
     TransactionUpdate,
@@ -34,6 +35,7 @@ __all__ = [
     "ParsedTransaction",
     "ParsePreview",
     "ParseRequest",
+    "RecentTransaction",
     "ShopCreate",
     "ShopRead",
     "TransactionCreate",

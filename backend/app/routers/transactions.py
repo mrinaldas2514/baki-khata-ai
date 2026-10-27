@@ -1,10 +1,16 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.schemas import CustomerLedger, TransactionCreate, TransactionUpdate, TransactionWithBalance
+from app.schemas import (
+    CustomerLedger,
+    RecentTransaction,
+    TransactionCreate,
+    TransactionUpdate,
+    TransactionWithBalance,
+)
 from app.services import transactions as service
 
 router = APIRouter(prefix="/shops/{shop_id}", tags=["transactions"])
@@ -23,6 +29,12 @@ def create_transaction(shop_id: int, customer_id: int, data: TransactionCreate, 
 @router.get("/customers/{customer_id}/transactions", response_model=CustomerLedger)
 def list_customer_transactions(shop_id: int, customer_id: int, db: DB):
     return service.get_customer_ledger(db, shop_id, customer_id)
+
+
+@router.get("/transactions", response_model=list[RecentTransaction])
+def list_recent_transactions(shop_id: int, db: DB, limit: Annotated[int, Query(ge=1, le=100)] = 10):
+    """The shop's latest transactions across all customers, newest first."""
+    return service.list_recent_transactions(db, shop_id, limit)
 
 
 @router.get("/transactions/{transaction_id}", response_model=TransactionWithBalance)
