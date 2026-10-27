@@ -3,15 +3,23 @@ import { api } from './api/client'
 import type { Customer, ParseConfirmResult, ParsePreview, RecentTransaction } from './api/types'
 import { ConfirmationCard } from './components/ConfirmationCard'
 import { EntryForm } from './components/EntryForm'
+import { MicButton } from './components/MicButton'
 import { RecentTransactions } from './components/RecentTransactions'
 import { SavedMessage } from './components/SavedMessage'
 import { SmartEntry } from './components/SmartEntry'
+import { VoiceSettings } from './components/VoiceSettings'
+import { VoiceStatus } from './components/VoiceStatus'
 import { LOW_CONFIDENCE } from './config'
 import { type CustomerChoice, type Draft, EMPTY_FORM, type FormValues, toConfirmRequest } from './entry'
 import { parseErrorMessage, saveErrorMessage } from './errors'
 import { strings } from './strings'
+import { useVoiceSettings } from './voice/settings'
+import { useVoiceEngine } from './voice/useVoiceEngine'
+import { useVoiceInput } from './voice/useVoiceInput'
 
 const RECENT_LIMIT = 10
+// Same limit as the box and POST /parse.
+const MAX_TEXT = 500
 
 /**
  * The one screen of the app:
@@ -57,6 +65,31 @@ export default function App() {
   const [highlightId, setHighlightId] = useState<number | null>(null)
   const topRef = useRef<HTMLDivElement>(null)
 
+  // Voice: the transcript goes into the box, then through the same parse -> confirm -> save flow.
+  const [voiceSettings, updateVoiceSettings] = useVoiceSettings()
+  const voiceEngine = useVoiceEngine(voiceSettings.preferServer)
+  const [heardText, setHeardText] = useState<string | null>(null)
+  const voice = useVoiceInput({
+    engine: voiceEngine.engine,
+    language: voiceSettings.language,
+    maxSeconds: voiceEngine.maxSeconds,
+    transcribe: (audio, language) => api.transcribe(audio, language).then((result) => result.text),
+    onInterim: (heard) => setText(heard.slice(0, MAX_TEXT)),
+    onText: (heard) => {
+      const sentence = heard.slice(0, MAX_TEXT)
+      setText(sentence)
+      if (voiceSettings.autoSubmit) {
+        handleSubmit(sentence)
+      } else {
+        setHeardText(sentence)
+      }
+    },
+    onError: (code) => {
+      if (code === 'server-off') voiceEngine.disableServer()
+    },
+  })
+  const voiceActive = voice.state === 'listening' || voice.state === 'processing'
+
   const fetchRecent = useCallback(
     () => api.recentTransactions(RECENT_LIMIT).then(setRecent, () => setRecentFailed(true)),
     [],
@@ -78,6 +111,7 @@ export default function App() {
   }
 
   async function handleSubmit(sentence: string) {
+    setHeardText(null)
     goTo({ kind: 'parsing' })
     try {
       const preview = await api.parse(sentence)
@@ -128,7 +162,40 @@ export default function App() {
         {step.kind === 'saved' && <SavedMessage result={step.result} onClose={() => goTo({ kind: 'idle' })} />}
 
         {showEntry && (
-          <SmartEntry value={text} onChange={setText} onSubmit={handleSubmit} busy={step.kind === 'parsing'} />
+          <SmartEntry
+            value={text}
+            onChange={setText}
+            onSubmit={handleSubmit}
+            busy={step.kind === 'parsing' || voiceActive}
+            actions={
+              voiceEngine.engine !== 'none' && (
+                <MicButton
+                  state={voice.state}
+                  onStart={voice.start}
+                  onStop={voice.stop}
+                  disabled={step.kind === 'parsing'}
+                />
+              )
+            }
+            footer={
+              voiceEngine.engine !== 'none' && (
+                <>
+                  <VoiceStatus
+                    state={voice.state}
+                    error={voice.error}
+                    showCheckHint={heardText !== null && heardText === text}
+                    showHoldHint={!text && step.kind === 'idle'}
+                  />
+                  <VoiceSettings
+                    settings={voiceSettings}
+                    onChange={updateVoiceSettings}
+                    canChooseServer={voiceEngine.canChooseServer}
+                    serverOnly={voiceEngine.serverOnly}
+                  />
+                </>
+              )
+            }
+          />
         )}
 
         {step.kind === 'parsing' && (

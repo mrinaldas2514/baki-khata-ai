@@ -11,6 +11,7 @@ from sqlalchemy.pool import StaticPool
 from app.database import build_engine, create_tables
 from app.main import create_app
 from app.models import Base
+from app.stt import Transcript
 
 # Defaults to in-memory SQLite. Set e.g. TEST_DATABASE_URL=postgresql+psycopg://... to run
 # the same suite against PostgreSQL (use a throwaway database: tables are dropped).
@@ -58,14 +59,38 @@ class FakeLLM:
         return answer if isinstance(answer, str) else json.dumps(answer, ensure_ascii=False)
 
 
+class FakeSTT:
+    """Stands in for Whisper. Queue answers with `reply(...)`: a Transcript, a str, or an exception."""
+
+    def __init__(self) -> None:
+        self.answers: list[object] = []
+        self.calls: list[dict] = []
+
+    def reply(self, *answers: object) -> None:
+        self.answers.extend(answers)
+
+    def transcribe(self, audio: bytes, filename: str, language=None) -> Transcript:
+        self.calls.append({"audio": audio, "filename": filename, "language": language})
+        assert self.answers, "FakeSTT was called more times than answers were queued"
+        answer = self.answers.pop(0)
+        if isinstance(answer, Exception):
+            raise answer
+        return answer if isinstance(answer, Transcript) else Transcript(text=str(answer))
+
+
 @pytest.fixture
 def fake_llm() -> FakeLLM:
     return FakeLLM()
 
 
 @pytest.fixture
-def client(engine: Engine, fake_llm: FakeLLM) -> Generator[TestClient]:
-    with TestClient(create_app(engine, llm_client=fake_llm)) as test_client:
+def fake_stt() -> FakeSTT:
+    return FakeSTT()
+
+
+@pytest.fixture
+def client(engine: Engine, fake_llm: FakeLLM, fake_stt: FakeSTT) -> Generator[TestClient]:
+    with TestClient(create_app(engine, llm_client=fake_llm, stt_client=fake_stt)) as test_client:
         yield test_client
 
 

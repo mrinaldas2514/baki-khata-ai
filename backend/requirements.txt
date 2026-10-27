@@ -8,3 +8,5 @@ tzdata>=2024.1
 # AI parsing: Groq's official SDK and fast fuzzy string matching for customer names.
 groq==1.7.0
 rapidfuzz==3.14.6
+# Form and file uploads (voice recordings sent to POST /transcribe).
+python-multipart==0.0.32
