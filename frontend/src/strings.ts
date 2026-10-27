@@ -15,6 +15,31 @@ const banglish = {
   submit: 'Hisab korun',
   parsing: 'Bujhchi... ektu opekkha korun',
 
+  // Voice input (mic button next to the box)
+  voice: {
+    micIdle: 'Bole likhun',
+    micListening: 'Shunchi... bola hole chhere din',
+    micProcessing: 'Lekha hocche...',
+    micRetry: 'Abar bolun',
+    buttonIdle: 'Bolun',
+    buttonListening: 'Shunchi',
+    buttonProcessing: 'Lekha...',
+    holdHint: 'Mic chepe dhore bolun, bola hole chhere din. Ba ekbar chapun, shesh hole abar chapun.',
+    listeningHint: 'Shunchi... bola shesh hole chhere din (ba abar chapun).',
+    processingHint: 'Apnar kotha lekha hocche...',
+    checkTranscript: 'Dekhe nin. Kono bhul thakle thik kore "Hisab korun" chapun.',
+    settingsTitle: (language: string) => `Voice: ${language}`,
+    languageLabel: 'Kon bhashay bolben?',
+    languages: {
+      'bn-BD': 'Bangla (Bangladesh)',
+      'bn-IN': 'Bangla (India)',
+      'en-IN': 'English / Banglish (India)',
+    },
+    autoSubmit: 'Bola shesh holei nije theke "Hisab korun"',
+    preferServer: 'Server diye shunun (beshi thik bujhe, ektu deri hoy)',
+    serverOnly: 'Ei browser-e voice server diye shona hoy.',
+  },
+
   // Confirmation card
   confirmTitle: 'Thik ache to?',
   youWrote: 'Apni likhechen',
@@ -88,6 +113,16 @@ const banglish = {
     invalidData: 'Kichu tottho thik nei. Dekhe abar save korun.',
     saveFailed: 'Save hoyni. Abar chesta korun.',
     unknown: 'Kichu ekta somossa hoyeche. Abar chesta korun.',
+    // Voice input
+    micPermission: 'Mic chalu korar onumoti nei. Browser-er setting-e ei site-ke mic-er onumoti din, ba likhe din.',
+    micInsecure: 'Ei address-e browser mic chalu korte dey na (https lagbe). Ekhon likhe din.',
+    micNoSpeech: 'Kichu shunte paini. Mic-er kache eshe ektu jore abar bolun.',
+    micNotFound: 'Kono mic pawa jayni. Mic lagiye abar chesta korun, ba likhe din.',
+    micNetwork: 'Internet-e somossa, tai voice kaj korche na. Abar chesta korun, ba likhe din.',
+    micLanguage: 'Ei browser ei bhasha bujhe na. Voice setting-e onno bhasha bachun.',
+    micServerOff: 'Server-e voice chalu nei. Browser diye bolun, ba likhe din.',
+    micTooLong: 'Onek lomba hoye geche. Chhoto kore ek line-e abar bolun.',
+    micFailed: 'Voice bujhte pareni. Abar bolun, ba likhe din.',
   },
 }
 

@@ -4,7 +4,7 @@ from functools import lru_cache
 from typing import Annotated, Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic import SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
@@ -31,6 +31,11 @@ class Settings(BaseSettings):
     groq_api_key: SecretStr | None = None
     groq_model: str = "llama-3.3-70b-versatile"
     llm_timeout_seconds: float = 20.0
+    # Voice input on the server (POST /transcribe) with Groq's Whisper; uses GROQ_API_KEY too.
+    groq_stt_model: str = "whisper-large-v3"
+    # Limits for one recording. The app records at ~32 kbit/s, so 30 s is about 120 KB.
+    stt_max_audio_bytes: int = Field(default=1_000_000, gt=0)
+    stt_max_audio_seconds: float = Field(default=30.0, gt=0)
 
     @field_validator("groq_api_key", mode="before")
     @classmethod

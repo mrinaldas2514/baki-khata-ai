@@ -1,5 +1,13 @@
 import { API_URL, SHOP_ID } from '../config'
-import type { Customer, ParseConfirm, ParseConfirmResult, ParsePreview, RecentTransaction } from './types'
+import type {
+  Customer,
+  ParseConfirm,
+  ParseConfirmResult,
+  ParsePreview,
+  RecentTransaction,
+  TranscribeResult,
+  TranscribeStatus,
+} from './types'
 
 // The AI can take a while on a slow connection (the backend waits up to 20 s and retries once).
 const TIMEOUT_MS = 45_000
@@ -29,7 +37,8 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   try {
     response = await fetch(`${API_URL}${path}`, {
       ...init,
-      headers: { 'Content-Type': 'application/json', ...init.headers },
+      // A FormData body (audio upload) sets its own multipart Content-Type.
+      headers: init.body instanceof FormData ? init.headers : { 'Content-Type': 'application/json', ...init.headers },
       signal: AbortSignal.timeout(TIMEOUT_MS),
     })
   } catch (error) {
@@ -55,4 +64,15 @@ export const api = {
   recentTransactions: (limit = 10) => request<RecentTransaction[]>(`${shop}/transactions?limit=${limit}`),
 
   customers: () => request<Customer[]>(`${shop}/customers`),
+
+  /** Whether the server can turn recordings into text (it needs a Groq key), and its limits. */
+  transcribeStatus: () => request<TranscribeStatus>('/transcribe/status'),
+
+  /** A short recording -> text for the entry box (then checked and sent to `parse` as usual). */
+  transcribe: (audio: Blob, language: string) => {
+    const form = new FormData()
+    form.append('file', audio, 'voice')
+    form.append('language', language)
+    return request<TranscribeResult>('/transcribe', { method: 'POST', body: form })
+  },
 }

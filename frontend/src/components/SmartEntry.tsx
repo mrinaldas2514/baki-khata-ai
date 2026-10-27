@@ -8,15 +8,16 @@ interface Props {
   onSubmit: (text: string) => void
   busy?: boolean
   /**
-   * Extra buttons shown next to "Hisab korun". Voice input plugs in here later, e.g.
-   * `actions={<MicButton onTranscript={setText} />}`: the text is controlled by the parent,
-   * so a transcript can fill (or submit) the box like typing does.
+   * Extra buttons shown next to "Hisab korun" (the mic). The text is controlled by the parent,
+   * so a transcript fills (or submits) the box exactly like typing does.
    */
   actions?: ReactNode
+  /** Shown under the buttons (voice status and settings). */
+  footer?: ReactNode
 }
 
 /** The big "Ki hisab likhben?" box. */
-export function SmartEntry({ value, onChange, onSubmit, busy = false, actions }: Props) {
+export function SmartEntry({ value, onChange, onSubmit, busy = false, actions, footer }: Props) {
   const text = value.trim()
 
   function handleSubmit(event: FormEvent) {
@@ -50,6 +51,7 @@ export function SmartEntry({ value, onChange, onSubmit, busy = false, actions }:
         </Button>
         {actions}
       </div>
+      {footer}
     </form>
   )
 }

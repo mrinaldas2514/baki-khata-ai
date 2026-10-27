@@ -14,7 +14,8 @@ export function mockApi(handlers: Record<string, Handler>) {
   const fetchMock = vi.fn(async (url: string, init: RequestInit = {}) => {
     const path = new URL(url).pathname
     const key = `${init.method ?? 'GET'} ${path}`
-    const body = init.body ? JSON.parse(String(init.body)) : undefined
+    // FormData (an audio upload) is passed through as is; JSON is parsed.
+    const body = init.body instanceof FormData ? init.body : init.body ? JSON.parse(String(init.body)) : undefined
     requests.push({ key, body })
     const handler = handlers[key] ?? { status: 404, body: { detail: `No mock for ${key}` } }
     const answer = await (typeof handler === 'function' ? handler(body) : handler)
@@ -32,6 +33,8 @@ export const PARSE = 'POST /shops/1/parse'
 export const CONFIRM = 'POST /shops/1/parse/confirm'
 export const RECENT = 'GET /shops/1/transactions'
 export const CUSTOMERS = 'GET /shops/1/customers'
+export const TRANSCRIBE = 'POST /transcribe'
+export const TRANSCRIBE_STATUS = 'GET /transcribe/status'
 
 const NOW = '2026-10-27T10:00:00Z'
 

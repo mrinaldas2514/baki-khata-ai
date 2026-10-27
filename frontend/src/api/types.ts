@@ -67,3 +67,14 @@ export interface ParseConfirmResult {
   customer: Customer
   customer_created: boolean
 }
+
+export interface TranscribeResult {
+  /** Empty when no speech was heard. */
+  text: string
+}
+
+export interface TranscribeStatus {
+  available: boolean
+  max_seconds: number
+  max_bytes: number
+}

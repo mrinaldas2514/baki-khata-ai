@@ -8,8 +8,8 @@ This repository contains:
 - a **backend**: a REST API built with FastAPI, SQLAlchemy and Pydantic, plus an **AI parsing
   layer** that turns one free-form sentence ("rahim bhai 2 kg chal 120 taka baki") into a
   transaction preview;
-- a **frontend**: a mobile-first React app with one screen. Type a sentence, check the
-  confirmation card, save.
+- a **frontend**: a mobile-first React app with one screen. Type or speak a sentence, check
+  the confirmation card, save.
 
 ## How it works
 
@@ -17,7 +17,9 @@ The whole app is one screen, made for a busy shopkeeper on a cheap Android phone
 
 1. **Write.** A big box asks *"Ki hisab likhben?"* ("What do you want to note?"). The
    shopkeeper types one sentence the way they'd say it: `salma apa pach sho taka baki, dal r tel`.
-   Below the box are the shop's last 10 entries.
+   Next to the box is a big **mic button**: hold it, speak, release, and the words appear in the
+   box to check and fix before going on (see [Voice input](#voice-input)). Below the box are the
+   shop's last 10 entries.
 2. **Check.** After *Hisab korun*, a loading message shows while the backend reads the
    sentence (`POST /shops/{id}/parse`, which saves nothing). Then a **confirmation card**
    shows what it understood: the amount in big type (৳500), whether it's **Baki** (red/orange:
@@ -118,6 +120,13 @@ address (System Settings → Wi-Fi → Details, e.g. `192.168.0.5`). Then:
    `npm run dev -- --host`.
 3. Open `http://192.168.0.5:5173` on the phone.
 
+The mic won't work this way: browsers only allow the microphone on `https://` pages or
+`localhost`, and the app says so when you press it. To try voice on the phone, either open
+`chrome://flags/#unsafely-treat-insecure-origin-as-secure` in Chrome on the phone, add
+`http://192.168.0.5:5173`, and restart Chrome; or serve the app over https (e.g. a tunnel such as
+`cloudflared tunnel --url http://localhost:5173`, then add the tunnel's address to `CORS_ORIGINS`
+and point `VITE_API_URL` at a tunnel to port 8000).
+
 ### Common problems
 
 | You see | Fix |
@@ -126,6 +135,10 @@ address (System Settings → Wi-Fi → Details, e.g. `192.168.0.5`). Then:
 | "Dokan pawa jayni" | No demo shop. Run `python -m app.seed` in `backend/` and check `VITE_SHOP_ID`. |
 | A CORS error in the browser console | Add the address in the browser's address bar to `CORS_ORIGINS` in `backend/.env` (no trailing `/`) and restart the backend. |
 | `command not found: uvicorn` | Run `source .venv/bin/activate` in `backend/` first. |
+| No mic button | The browser has no speech recognition (Firefox) and the backend has no `GROQ_API_KEY`. Use Chrome or Edge, or add a key. |
+| "Mic chalu korar onumoti nei" | The browser blocked the microphone. Click the icon left of the address bar and allow the microphone, then reload. |
+| "Ei address-e browser mic chalu korte dey na" | The page isn't on `https://` or `localhost` (see *Try it on your phone*). |
+| "Internet-e somossa, tai voice kaj korche na" | Chrome's speech recognition runs on Google's servers and needs internet. Brave blocks it: turn on *Server diye shunun* in the voice settings (needs a key). |
 
 ## Project structure
 
@@ -137,12 +150,13 @@ backend/
 │   ├── database.py      # Engine + per-request session
 │   ├── time_utils.py    # UTC / shop-local-time helpers
 │   ├── llm/             # LLM interface, Groq client, rule-based demo parser
+│   ├── stt/             # speech-to-text interface and the Groq Whisper client
 │   ├── models/          # SQLAlchemy tables: Shop, Customer, Transaction
 │   ├── schemas/         # Pydantic request/response models and validation
 │   ├── routers/         # HTTP endpoints (thin, just call services)
 │   └── services/        # Business logic (balance, customers, transactions, dashboard,
-│                        #   parsing, parse_prompt, number_words, name_matching)
-├── tests/               # pytest suite (the LLM is always faked)
+│                        #   parsing, parse_prompt, number_words, name_matching, transcription)
+├── tests/               # pytest suite (the LLM and speech-to-text are always faked)
 │   └── fixtures/eval_sentences.json   # example sentences + expected output
 ├── app/seed.py          # demo shop: python -m app.seed
 ├── requirements.txt
@@ -155,8 +169,9 @@ frontend/                # React + Vite + TypeScript + Tailwind
 │   ├── strings.ts       # every UI text, in Banglish (add a Bangla/English set here later)
 │   ├── config.ts        # VITE_API_URL, VITE_SHOP_ID
 │   ├── api/             # fetch client and the backend's JSON types
-│   ├── components/      # SmartEntry, ConfirmationCard, EntryForm, RecentTransactions...
-│   └── test/            # test setup and the fetch mock
+│   ├── components/      # SmartEntry, MicButton, ConfirmationCard, EntryForm, RecentTransactions...
+│   ├── voice/           # speech engines (browser / server), useVoiceInput, voice settings
+│   └── test/            # test setup, the fetch mock and the speech API mocks
 └── .env.example
 ```
 
@@ -237,6 +252,8 @@ Interactive docs are available at `http://localhost:8000/docs` once the server i
 | GET | `/shops/{shop_id}/dashboard?overdue_days=30` | Total outstanding, today's collection, top 5, overdue customers |
 | POST | `/shops/{shop_id}/parse` | Turn one free-form sentence into a transaction **preview** (saves nothing) |
 | POST | `/shops/{shop_id}/parse/confirm` | Save the confirmed preview, creating the customer if new |
+| POST | `/transcribe` | A short voice recording (multipart `file`, optional `language`) → `{"text": "..."}` (saves nothing) |
+| GET | `/transcribe/status` | Whether server-side transcription is set up, and its size/length limits |
 
 Every customer and transaction is looked up within its shop. Asking for another shop's data
 returns 404.
@@ -294,7 +311,10 @@ Don't commit `.env`; it's already in `.gitignore`.
 | `LLM_PROVIDER` | `auto` | `auto`: Groq when `GROQ_API_KEY` is set, otherwise the rule-based demo parser. `groq`: always Groq (503 without a key). `fake`: always the demo parser |
 | `GROQ_API_KEY` | *(empty)* | Groq API key for AI parsing |
 | `GROQ_MODEL` | `llama-3.3-70b-versatile` | Groq chat model; must support JSON mode |
-| `LLM_TIMEOUT_SECONDS` | `20` | How long to wait for the model |
+| `LLM_TIMEOUT_SECONDS` | `20` | How long to wait for the model (also used for transcription) |
+| `GROQ_STT_MODEL` | `whisper-large-v3` | Groq speech-to-text model for `POST /transcribe` (`whisper-large-v3-turbo` is faster and cheaper, a little weaker on Bangla) |
+| `STT_MAX_AUDIO_BYTES` | `1000000` | Largest recording `POST /transcribe` accepts (413 above it) |
+| `STT_MAX_AUDIO_SECONDS` | `30` | Longest recording; the app stops recording at this point too |
 
 ### Switching to PostgreSQL
 
@@ -345,9 +365,88 @@ first parse so it's clear which one is running.
      -d '{"text": "salma apa pach sho taka baki, dal r tel"}'
    ```
 
+## Voice input
+
+A busy shopkeeper can speak instead of typing. Speaking only fills the text box: the words then
+go through exactly the same steps as typed text (*Hisab korun* → `POST /parse` → confirmation
+card → `POST /parse/confirm`). Nothing is saved from voice without the same check.
+
+**Using it**
+
+- **Hold to talk**: press and hold the mic, speak, let go. Releasing stops listening.
+- **Tap to talk** (easier for some, and how keyboards and screen readers work it): tap once to
+  start, tap again to stop. Enter or Space on the focused button does the same.
+- The button shows what's happening: **Bolun** (idle), red and pulsing **Shunchi** (listening),
+  a spinner **Lekha...** (turning speech into text), amber with a message (something went wrong).
+- The words appear in the box (live while speaking, with browser recognition). Fix anything
+  wrong, then press *Hisab korun*. Recording stops by itself after 30 seconds.
+- **Voice settings** (under the box): the language to listen for, *Bangla (Bangladesh)*
+  (`bn-BD`, the default), *Bangla (India)* (`bn-IN`) or *English / Banglish (India)* (`en-IN`);
+  **auto-submit**, which sends the sentence on as soon as speaking ends (the confirmation card
+  still comes before saving); and, when both engines are available, *Server diye shunun* to
+  prefer the server. Settings are remembered on the phone (`localStorage`); if storage is
+  blocked (private mode) they still apply until the page is closed.
+- Problems get a plain message and typing always still works: microphone permission denied,
+  no microphone, nothing heard, no internet, a language the browser can't do, a recording that's
+  too long, or a server without speech-to-text.
+
+Which language to pick: with `bn-BD`/`bn-IN` the words come back in Bangla script
+(`রহিম ভাই ১২০ টাকা বাকি`); with `en-IN` they come back in Latin letters (`rahim bhai 120 taka
+baki`), which suits shopkeepers who speak a lot of English words. The parser handles both.
+
+**Two engines**
+
+| | Browser speech recognition (default) | Server: Groq Whisper (`POST /transcribe`) |
+|---|---|---|
+| How | The browser's Web Speech API | The app records with `MediaRecorder` (Opus, ~32 kbit/s, about 120 KB for 30 s) and uploads it |
+| Cost | Free | Groq's speech-to-text pricing; needs `GROQ_API_KEY` |
+| Speed | Instant, words appear while speaking | A second or two after letting go |
+| Accuracy | Good for plain Bangla or English; weaker on mixed Banglish, names and numbers | Better on mixed Banglish, names and amounts; it's also given a typical shop sentence as a hint |
+| Privacy | Audio goes to the browser maker (Google for Chrome) | Audio goes to your backend, then Groq |
+| Works in | Chrome, Edge, Samsung Internet (Android and desktop), Safari 14.1+ with Siri enabled; needs internet | Every modern browser, including Firefox and Safari |
+
+The app uses the browser engine when the browser has one, and the server when it doesn't (or when
+*Server diye shunun* is on). With no key, `POST /transcribe` returns **503**, `GET
+/transcribe/status` says `"available": false`, and the app hides the server option; on a browser
+without speech recognition (Firefox) the mic button is then hidden and the app works by typing.
+
+**Browser support**
+
+| Browser | Voice input |
+|---|---|
+| Chrome / Edge / Samsung Internet (Android, desktop) | Browser recognition (or the server, if chosen) |
+| Safari (iPhone, Mac) | Browser recognition when Siri / Dictation is on; otherwise the server |
+| Firefox | Server only (no Web Speech recognition) |
+| Brave | Has the API but blocks it ("Internet-e somossa"): turn on *Server diye shunun* |
+| Any browser on `http://` other than `localhost` | Blocked by the browser: the mic needs `https://` |
+
+**`POST /transcribe`** (multipart form)
+
+```bash
+curl -X POST localhost:8000/transcribe -F "file=@voice.webm;type=audio/webm" -F language=bn-BD
+# {"text": "রহিম ভাই ২ কেজি চাল ১২০ টাকা বাকি"}
+```
+
+- `file`: webm, ogg, mp4/m4a, mp3, wav or flac (`415` otherwise). At most `STT_MAX_AUDIO_BYTES`
+  (`413`); empty is `422`.
+- `language`: `bn-BD`, `bn-IN`, `en-IN` (or just `bn`/`en`); leave out to auto-detect. Other
+  values are `422`.
+- Length: the app stops recording at `STT_MAX_AUDIO_SECONDS`. The server checks the length
+  Whisper reports and answers `413` above it (with 1.5 s of slack). It can't check before
+  transcribing: Chrome writes WebM without a duration header, so the size limit is what keeps
+  uploads small. Starlette receives the whole upload before the size check, so in production also
+  cap the request body at the proxy (e.g. nginx `client_max_body_size 2m`).
+- `text` is empty when nobody spoke: segments Whisper itself marks as silence are dropped, since
+  otherwise it tends to invent text such as "Thank you." for silence.
+- `502` when Groq fails (details are logged, not returned), `503` without a key.
+
+Everything outside `app/stt/` depends only on the `SpeechToTextClient` interface in
+`app/stt/base.py` (`transcribe(audio, filename, language) -> Transcript`), the same way the LLM is
+swapped: add a class and return it from `build_stt_client()` in `app/stt/__init__.py`.
+
 ## AI parsing
 
-A shopkeeper types (or later speaks) one sentence in Banglish, Bangla script, English or a
+A shopkeeper types or speaks one sentence in Banglish, Bangla script, English or a
 mix. The backend turns it into a **preview**; nothing is saved until the shopkeeper confirms.
 
 ```
@@ -500,10 +599,14 @@ npm run format      # Prettier
 
 The frontend tests drive the real screen with the backend mocked (`src/test/mockApi.ts`
 replaces `fetch`): the confirmation card for a matched, fuzzy, ambiguous and new customer, edit
-mode, saving, and every error falling back to manual entry.
+mode, saving, and every error falling back to manual entry. The voice tests
+(`src/VoiceInput.test.tsx`) replace the speech APIs (`src/test/mockSpeech.ts`: a fake
+`SpeechRecognition`, `MediaRecorder` and microphone) and cover the mic button's states, hold vs.
+tap vs. keyboard, the transcript going through the normal flow, auto-submit, saved settings,
+permission denied and the other errors, and the server fallback.
 
-The tests never call Groq and need no API key: the LLM is replaced by a fake that returns
-scripted answers (`FakeLLM` in `tests/conftest.py`).
+The tests never call Groq and need no API key: the LLM and speech-to-text are replaced by fakes
+that return scripted answers (`FakeLLM` and `FakeSTT` in `tests/conftest.py`).
 
 By default the tests use a fresh in-memory SQLite database for each test. To run the same suite
 against PostgreSQL, point `TEST_DATABASE_URL` at a **throwaway** database (its tables are dropped):
@@ -517,9 +620,8 @@ TEST_DATABASE_URL=postgresql+psycopg://user:password@localhost:5432/baki_test py
 - Alembic migrations (tables are currently created with `create_all` on startup)
 - Authentication: one login per shop, and taking `shop_id` from the token instead of the URL
 - Pagination for long customer ledgers
-- Voice input (speech-to-text in front of `/parse`). The entry box is ready for it:
-  `SmartEntry` takes an `actions` slot for a mic button and its text is controlled by `App`,
-  so a transcript can fill the box like typing does
+- Measure voice accuracy: a few recorded Banglish sentences run through both engines and
+  `/parse`, to choose the default engine and Whisper model with numbers
 - A Bangla-script / English switch for the UI (all texts are in `frontend/src/strings.ts`)
 - An accuracy script that runs `eval_sentences.json` against the real model
 - Store the AI's original parse next to the confirmed values, to measure how often shopkeepers correct it

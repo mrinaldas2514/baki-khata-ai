@@ -13,14 +13,20 @@ from sqlalchemy.orm import sessionmaker
 from app.config import get_settings
 from app.database import build_engine, create_tables
 from app.llm import LLMClient, LLMNotConfiguredError, LLMProviderError
-from app.routers import customers, dashboard, parse, shops, transactions
+from app.routers import customers, dashboard, parse, shops, transactions, transcribe
 from app.services.exceptions import ConflictError, NotFoundError
 from app.services.parsing import LLMOutputError, NotATransactionError
+from app.services.transcription import AudioRejectedError
+from app.stt import SpeechToTextClient, STTNotConfiguredError, STTProviderError
 
 logger = logging.getLogger(__name__)
 
 
-def create_app(engine: Engine | None = None, llm_client: LLMClient | None = None) -> FastAPI:
+def create_app(
+    engine: Engine | None = None,
+    llm_client: LLMClient | None = None,
+    stt_client: SpeechToTextClient | None = None,
+) -> FastAPI:
     settings = get_settings()
     if engine is None:
         engine = build_engine(settings.database_url, echo=settings.sql_echo)
@@ -35,6 +41,7 @@ def create_app(engine: Engine | None = None, llm_client: LLMClient | None = None
     app.state.session_factory = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
     # None means "build the configured provider on first use" (see app.llm.get_llm_client).
     app.state.llm_client = llm_client
+    app.state.stt_client = stt_client
 
     # Lets the frontend (a different origin in development) call the API from the browser.
     app.add_middleware(
@@ -49,6 +56,7 @@ def create_app(engine: Engine | None = None, llm_client: LLMClient | None = None
     app.include_router(transactions.router)
     app.include_router(dashboard.router)
     app.include_router(parse.router)
+    app.include_router(transcribe.router)
 
     @app.get("/health", tags=["health"])
     def health():
@@ -93,6 +101,25 @@ def _register_error_handlers(app: FastAPI) -> None:
                 "detail": "The AI service is not reachable right now. "
                 "Please try again or enter the transaction manually."
             },
+        )
+
+    @app.exception_handler(AudioRejectedError)
+    async def _audio_rejected(_request: Request, exc: AudioRejectedError):
+        return JSONResponse(status_code=exc.status_code, content={"detail": str(exc)})
+
+    @app.exception_handler(STTNotConfiguredError)
+    async def _stt_not_configured(_request: Request, exc: STTNotConfiguredError):
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content={"detail": str(exc)}
+        )
+
+    @app.exception_handler(STTProviderError)
+    async def _stt_provider(_request: Request, exc: STTProviderError):
+        # 502, not 503: the server is set up, the speech service failed this time.
+        logger.error("Speech-to-text provider error: %s", exc)
+        return JSONResponse(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            content={"detail": "The speech-to-text service failed. Please try again or type it."},
         )
 
     @app.exception_handler(RequestValidationError)
