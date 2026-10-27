@@ -1,0 +1,15 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Noto Sans Bengali', system-ui, sans-serif;
+}
+
+html {
+  /* Phones with a larger system font size scale everything, since sizes are in rem. */
+  font-size: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  @apply bg-stone-100 font-sans text-stone-900 antialiased;
+}

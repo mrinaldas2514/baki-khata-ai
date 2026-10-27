@@ -164,10 +164,12 @@ def test_preview_provider_down_is_503_without_leaking_details(client, parse_url,
     assert "gsk_secret" not in response.text
 
 
-def test_preview_without_api_key_is_503(engine, monkeypatch):
+def test_preview_with_groq_but_no_api_key_is_503(engine, monkeypatch):
     from fastapi.testclient import TestClient
 
-    monkeypatch.setattr("app.llm.get_settings", lambda: Settings(_env_file=None))
+    monkeypatch.setattr(
+        "app.llm.get_settings", lambda: Settings(_env_file=None, llm_provider="groq")
+    )
     with TestClient(create_app(engine)) as client:
         shop = client.post("/shops", json={"name": "Shop", "owner_name": "Owner"}).json()
         response = client.post(f"/shops/{shop['id']}/parse", json={"text": "karim 500 dilo"})

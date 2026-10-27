@@ -145,6 +145,10 @@ def _strip_joined_honorific(word: str) -> str:
     return word
 
 
+def is_honorific(word: str) -> bool:
+    return unicodedata.normalize("NFC", word.lower()) in _HONORIFICS
+
+
 def name_words(name: str) -> list[str]:
     """The words of a name without honorifics, as written (lowercased)."""
     words = [w.lower() for w in _WORD_RE.findall(unicodedata.normalize("NFC", name))]

@@ -8,6 +8,7 @@ from pydantic import ValidationError
 from app.config import Settings
 from app.llm import LLMNotConfiguredError, LLMProviderError, build_llm_client
 from app.llm.groq_client import GroqLLMClient
+from app.llm.rule_based import RuleBasedLLMClient
 from app.schemas import ParsedTransaction
 from app.services.parsing import LLMOutputError, NotATransactionError, parse_with_llm
 from tests.conftest import FakeLLM
@@ -129,11 +130,11 @@ def test_provider_errors_are_not_retried_here(fake_llm: FakeLLM):
 # --- Provider wiring ----------------------------------------------------------------------
 
 
-def test_no_api_key_means_not_configured():
+def test_groq_without_api_key_means_not_configured():
     with pytest.raises(LLMNotConfiguredError, match="GROQ_API_KEY"):
-        build_llm_client(Settings(_env_file=None, groq_api_key=None))
+        build_llm_client(Settings(_env_file=None, llm_provider="groq", groq_api_key=None))
     with pytest.raises(LLMNotConfiguredError):
-        build_llm_client(Settings(_env_file=None, groq_api_key="  "))
+        build_llm_client(Settings(_env_file=None, llm_provider="groq", groq_api_key="  "))
 
 
 def test_groq_client_is_built_from_settings():
@@ -180,3 +181,22 @@ def test_groq_errors_become_provider_errors(monkeypatch):
     client, _ = _groq_with(monkeypatch, error)
     with pytest.raises(LLMProviderError):
         client.complete_json([{"role": "user", "content": "hi"}])
+
+
+@pytest.mark.parametrize(
+    ("provider", "key", "expected"),
+    [
+        ("auto", "test-key", GroqLLMClient),
+        ("auto", None, RuleBasedLLMClient),
+        ("fake", "test-key", RuleBasedLLMClient),
+        ("groq", "test-key", GroqLLMClient),
+    ],
+)
+def test_llm_provider_setting_picks_the_client(provider, key, expected):
+    settings = Settings(_env_file=None, llm_provider=provider, groq_api_key=key)
+    assert isinstance(build_llm_client(settings), expected)
+
+
+def test_blank_llm_provider_means_auto():
+    assert Settings(_env_file=None, llm_provider=" ").llm_provider == "auto"
+    assert Settings(_env_file=None, llm_provider="FAKE").llm_provider == "fake"
