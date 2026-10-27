@@ -290,3 +290,133 @@ def test_recent_transactions_only_this_shop(client, shop, customer, add_txn):
     other = client.post("/shops", json={"name": "Other", "owner_name": "X"}).json()
     assert client.get(f"/shops/{other['id']}/transactions").json() == []
     assert client.get("/shops/999/transactions").status_code == 404
+
+
+# --- Ledger pages (newest first, "aro dekhun") ---------------------------------------------
+
+
+@pytest.fixture
+def long_ledger(customer, add_txn):
+    """25 entries a day apart, oldest first: credits of 100 with a payment of 50 every 5th."""
+    now = datetime.now(UTC)
+    rows = []
+    for i in range(25):
+        type_, amount = ("payment", 50) if i % 5 == 4 else ("credit", 100)
+        when = iso(now - timedelta(days=25 - i))
+        rows.append(add_txn(customer["id"], type_, amount, item=f"#{i}", created_at=when))
+    return rows
+
+
+def expected_running(rows):
+    balance, out = 0, []
+    for row in rows:
+        balance += row["amount"] if row["type"] == "credit" else -row["amount"]
+        out.append(balance)
+    return out
+
+
+def test_ledger_newest_first_pages_keep_full_running_balance(client, txn_url, long_ledger):
+    running = dict(zip((r["id"] for r in long_ledger), expected_running(long_ledger)))
+
+    first = client.get(txn_url, params={"order": "newest", "limit": 10}).json()
+    assert [t["item"] for t in first["transactions"]] == [f"#{i}" for i in range(24, 14, -1)]
+    assert first["total"] == 25
+    assert first["has_more"] is True
+    # The newest row's running balance is the customer's balance, not just this page's sum.
+    assert first["transactions"][0]["running_balance"] == first["customer"]["balance"] == 2000 - 250
+
+    second = client.get(txn_url, params={"order": "newest", "limit": 10, "offset": 10}).json()
+    last = client.get(txn_url, params={"order": "newest", "limit": 10, "offset": 20}).json()
+    assert [t["item"] for t in last["transactions"]] == ["#4", "#3", "#2", "#1", "#0"]
+    assert second["has_more"] is True
+    assert last["has_more"] is False
+
+    pages = first["transactions"] + second["transactions"] + last["transactions"]
+    assert len({t["id"] for t in pages}) == 25
+    assert all(t["running_balance"] == running[t["id"]] for t in pages)
+
+
+def test_ledger_oldest_first_is_still_the_default(client, txn_url, long_ledger):
+    body = client.get(txn_url).json()
+    assert [t["id"] for t in body["transactions"]] == [r["id"] for r in long_ledger]
+    assert [t["running_balance"] for t in body["transactions"]] == expected_running(long_ledger)
+    assert body["has_more"] is False
+    page = client.get(txn_url, params={"limit": 3, "offset": 1}).json()
+    assert [t["running_balance"] for t in page["transactions"]] == [200, 300, 400]
+
+
+def test_ledger_same_time_entries_are_ordered_by_id(client, txn_url, customer, add_txn):
+    when = iso(datetime.now(UTC) - timedelta(hours=1))
+    a = add_txn(customer["id"], "credit", 10, created_at=when)
+    b = add_txn(customer["id"], "credit", 20, created_at=when)
+    body = client.get(txn_url, params={"order": "newest"}).json()
+    assert [(t["id"], t["running_balance"]) for t in body["transactions"]] == [
+        (b["id"], 30),
+        (a["id"], 10),
+    ]
+
+
+def test_ledger_page_past_the_end(client, txn_url, long_ledger):
+    body = client.get(txn_url, params={"order": "newest", "limit": 10, "offset": 30}).json()
+    assert body["transactions"] == []
+    assert body["total"] == 25
+    assert body["has_more"] is False
+
+
+@pytest.mark.parametrize(
+    ("params", "field"),
+    [
+        ({"limit": 0}, "limit"),
+        ({"limit": 201}, "limit"),
+        ({"offset": -1}, "offset"),
+        ({"order": "random"}, "order"),
+    ],
+)
+def test_ledger_page_validation(client, txn_url, params, field):
+    response = client.get(txn_url, params=params)
+    assert response.status_code == 422
+    assert field in error_messages(response)
+
+
+# --- Edit / delete keep every balance right --------------------------------------------------
+
+
+def ledger_rows(client, txn_url):
+    body = client.get(txn_url, params={"order": "newest"}).json()
+    return body["customer"]["balance"], [(t["amount"], t["running_balance"]) for t in body["transactions"]]
+
+
+def test_editing_an_old_entry_updates_every_later_running_balance(client, shop, customer, txn_url, add_txn):
+    now = datetime.now(UTC)
+    old = add_txn(customer["id"], "credit", 500, created_at=iso(now - timedelta(days=3)))
+    add_txn(customer["id"], "payment", 200, created_at=iso(now - timedelta(days=2)))
+    add_txn(customer["id"], "credit", 100, created_at=iso(now - timedelta(days=1)))
+    assert ledger_rows(client, txn_url) == (400, [(100, 400), (200, 300), (500, 500)])
+
+    response = client.patch(f"/shops/{shop['id']}/transactions/{old['id']}", json={"amount": 300})
+    assert response.json()["customer_balance"] == 200
+    assert ledger_rows(client, txn_url) == (200, [(100, 200), (200, 100), (300, 300)])
+    assert client.get(f"/shops/{shop['id']}/customers/{customer['id']}").json()["balance"] == 200
+
+    # Turning the old credit into a payment flips its sign everywhere after it.
+    client.patch(f"/shops/{shop['id']}/transactions/{old['id']}", json={"type": "payment"})
+    assert ledger_rows(client, txn_url) == (-400, [(100, -400), (200, -500), (300, -300)])
+
+
+def test_deleting_an_entry_updates_balances_list_and_dashboard(client, shop, customer, txn_url, add_txn):
+    now = datetime.now(UTC)
+    old = add_txn(customer["id"], "credit", 500, created_at=iso(now - timedelta(days=40)))
+    add_txn(customer["id"], "credit", 100, created_at=iso(now - timedelta(days=1)))
+    dashboard = client.get(f"/shops/{shop['id']}/dashboard").json()
+    assert dashboard["total_outstanding"] == 600
+    assert [c["name"] for c in dashboard["overdue_customers"]] == ["Rahim"]
+
+    assert client.delete(f"/shops/{shop['id']}/transactions/{old['id']}").status_code == 204
+
+    assert ledger_rows(client, txn_url) == (100, [(100, 100)])
+    listed = client.get(f"/shops/{shop['id']}/customers").json()
+    assert [(c["balance"], c["owed_since"] is not None) for c in listed] == [(100, True)]
+    dashboard = client.get(f"/shops/{shop['id']}/dashboard").json()
+    assert dashboard["total_outstanding"] == 100
+    assert dashboard["overdue_customers"] == []
+    assert client.get(txn_url).json()["total"] == 1

@@ -1,5 +1,6 @@
 import type { RecentTransaction } from '../api/types'
 import { formatTaka, formatWhen } from '../format'
+import { href } from '../route'
 import { strings } from '../strings'
 import { TYPE_STYLES } from '../typeStyles'
 import { Button, TypeBadge } from './ui'
@@ -36,31 +37,33 @@ export function RecentTransactions({ transactions, failed = false, onRetry, high
       ) : (
         <ul className="flex flex-col divide-y divide-stone-200 overflow-hidden rounded-2xl bg-white">
           {transactions.map((txn) => (
-            <li
-              key={txn.id}
-              className={`flex items-center justify-between gap-3 px-4 py-3 ${txn.id === highlightId ? 'bg-emerald-50' : ''}`}
-            >
-              <div className="min-w-0">
-                <p className="truncate text-lg font-semibold text-stone-900">
-                  {txn.customer_name}
-                  {txn.customer_note && (
-                    <>
-                      {' '}
-                      <span className="font-normal text-stone-500">({txn.customer_note})</span>
-                    </>
-                  )}
-                </p>
-                <p className="truncate text-base text-stone-600">
-                  {formatWhen(txn.created_at)}
-                  {txn.item && ` · ${txn.item}`}
-                </p>
-              </div>
-              <div className="flex shrink-0 flex-col items-end gap-1">
-                <span className={`text-xl font-bold tabular-nums ${TYPE_STYLES[txn.type].text}`}>
-                  {formatTaka(txn.amount)}
-                </span>
-                <TypeBadge type={txn.type} />
-              </div>
+            <li key={txn.id}>
+              <a
+                href={href.khata(txn.customer_id)}
+                className={`flex min-h-16 items-center justify-between gap-3 px-4 py-3 active:bg-stone-100 ${txn.id === highlightId ? 'bg-emerald-50' : ''}`}
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-lg font-semibold text-stone-900">
+                    {txn.customer_name}
+                    {txn.customer_note && (
+                      <>
+                        {' '}
+                        <span className="font-normal text-stone-500">({txn.customer_note})</span>
+                      </>
+                    )}
+                  </p>
+                  <p className="truncate text-base text-stone-600">
+                    {formatWhen(txn.created_at)}
+                    {txn.item && ` · ${txn.item}`}
+                  </p>
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <span className={`text-xl font-bold tabular-nums ${TYPE_STYLES[txn.type].text}`}>
+                    {formatTaka(txn.amount)}
+                  </span>
+                  <TypeBadge type={txn.type} />
+                </div>
+              </a>
             </li>
           ))}
         </ul>

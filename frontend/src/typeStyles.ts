@@ -21,3 +21,8 @@ export const TYPE_STYLES: Record<
     panel: 'bg-green-50 border-green-500',
   },
 }
+
+/** A balance's color: red while the customer owes (baki), green when clear or paid ahead. */
+export function balanceTone(balance: number): string {
+  return balance > 0 ? 'text-red-700' : 'text-green-700'
+}

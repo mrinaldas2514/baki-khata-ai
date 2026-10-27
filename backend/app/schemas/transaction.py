@@ -65,4 +65,8 @@ class LedgerEntry(TransactionRead):
 
 class CustomerLedger(BaseModel):
     customer: CustomerRead
-    transactions: list[LedgerEntry] = Field(description="Oldest first")
+    transactions: list[LedgerEntry] = Field(
+        description="Oldest first, or newest first with order=newest"
+    )
+    total: int = Field(description="How many transactions the customer has in all")
+    has_more: bool = Field(description="More transactions after this page (use a larger offset)")

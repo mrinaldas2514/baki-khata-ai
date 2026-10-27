@@ -157,3 +157,47 @@ def test_today_uses_shop_local_day(db):
     utc = get_dashboard(db, shop.id, now=now, local_tz=ZoneInfo("UTC"))
     assert utc.today.isoformat() == "2026-10-25"
     assert utc.today_collection == 30
+
+
+def test_today_new_credit_and_last_7_days(client, shop, make_customer, add_txn):
+    c = make_customer("Rahim")
+    add_txn(c["id"], "credit", 900, created_at=ago(days=10))  # before the chart
+    add_txn(c["id"], "credit", 300, created_at=ago(days=6))
+    add_txn(c["id"], "payment", 100, created_at=ago(days=6))
+    add_txn(c["id"], "credit", 40, created_at=ago(days=2))
+    add_txn(c["id"], "credit", 120)
+    add_txn(c["id"], "credit", 80)
+    add_txn(c["id"], "payment", 60)
+
+    body = dashboard(client, shop)
+    assert body["today_new_credit"] == 200
+    assert body["today_collection"] == 60
+    days = body["last_7_days"]
+    assert len(days) == 7
+    assert days[-1] == {"date": body["today"], "credit": 200, "payment": 60}
+    assert [(d["credit"], d["payment"]) for d in days] == [
+        (300, 100), (0, 0), (0, 0), (0, 0), (40, 0), (0, 0), (200, 60),
+    ]  # fmt: skip
+    dates = [datetime.fromisoformat(d["date"]).date() for d in days]
+    assert all((b - a).days == 1 for a, b in zip(dates, dates[1:]))
+
+
+def test_last_7_days_uses_shop_local_days(db):
+    shop = Shop(name="S", owner_name="O")
+    db.add(shop)
+    db.flush()
+    c = Customer(shop_id=shop.id, name="Rahim")
+    db.add(c)
+    db.flush()
+    # 23:30 on the 25th and 00:30 on the 26th in Dhaka (UTC+6).
+    for amount, at in [(10, datetime(2026, 10, 25, 17, 30, tzinfo=UTC)),
+                       (20, datetime(2026, 10, 25, 18, 30, tzinfo=UTC))]:
+        db.add(Transaction(shop_id=shop.id, customer_id=c.id, type=TransactionType.CREDIT,
+                           amount=amount, created_at=at))
+    db.commit()
+
+    now = datetime(2026, 10, 26, 12, 0, tzinfo=UTC)
+    days = get_dashboard(db, shop.id, now=now, local_tz=ZoneInfo("Asia/Dhaka")).last_7_days
+    assert [(d.date.isoformat(), d.credit) for d in days[-2:]] == [("2026-10-25", 10), ("2026-10-26", 20)]
+    assert days[0].date.isoformat() == "2026-10-20"
+    assert get_dashboard(db, shop.id, now=now, local_tz=ZoneInfo("Asia/Dhaka")).today_new_credit == 20

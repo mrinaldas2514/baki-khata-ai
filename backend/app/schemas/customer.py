@@ -25,3 +25,9 @@ class CustomerRead(BaseModel):
     note: str | None
     created_at: datetime
     balance: int = Field(description="Total credit minus total payment, in taka")
+
+
+class CustomerListItem(CustomerRead):
+    owed_since: datetime | None = Field(
+        description="Date of the oldest credit that is still unpaid; null when nothing is owed"
+    )

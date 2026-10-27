@@ -90,6 +90,7 @@ const banglish = {
   savedNewCustomer: (name: string) => `Notun customer ${name} jog hoyeche.`,
   newBalanceOf: (name: string) => `${name}-er notun hisab`,
   close: 'Thik ache',
+  closeDialog: 'Bondho korun',
 
   // Recent transactions
   recentTitle: 'Shesh 10 ta hisab',
@@ -100,6 +101,98 @@ const banglish = {
   today: 'Aj',
   yesterday: 'Gotokal',
   daysAgo: (days: number) => `${days} din age`,
+
+  // Bottom navigation
+  nav: {
+    label: 'Prodhan menu',
+    hisab: 'Hisab',
+    customers: 'Customer',
+    dashboard: 'Dashboard',
+  },
+
+  // Customer list
+  customersTitle: 'Customer',
+  searchLabel: 'Customer khujun',
+  searchPlaceholder: 'Naam, elaka ba phone',
+  clearSearch: 'Khoja muchun',
+  sortLabel: 'Sajano',
+  sort: {
+    'most-owed': 'Beshi baki',
+    'oldest-owed': 'Purono baki',
+    name: 'Naam',
+  },
+  customerCount: (count: number) => `${count} jon customer`,
+  customersWithBaki: (count: number, total: string) => `${count} jon-er kache mot ${total} baki`,
+  customersEmpty: 'Ekhono kono customer nei. "Hisab" theke prothom hisab likhun.',
+  noSearchResult: (query: string) => `"${query}" naame kauke paini.`,
+  customersFailed: 'Customer-er list load hoyni.',
+  owedForDays: (days: number) => (days === 0 ? 'Aj theke baki' : `${days} din dhore baki`),
+  balanceClearShort: 'Clear',
+
+  // Customer khata
+  backToCustomers: 'Sob customer',
+  khataFailed: 'Khata load hoyni.',
+  customerNotFound: 'Ei customer-ke pawa jayni.',
+  call: (phone: string) => `Phone: ${phone}`,
+  noPhone: 'Phone number nei',
+  addCredit: 'Baki likhun',
+  addPayment: 'Joma likhun',
+  sendReminder: 'Reminder pathan',
+  historyTitle: 'Hisab-er khata',
+  historyCount: (shown: number, total: number) => `${total} ta hisab-er moddhe ${shown} ta dekhacche`,
+  historyHint: 'Kono hisab thik korte ba muchte tar upor chapun.',
+  historyEmpty: 'Ei customer-er ekhono kono hisab nei. Upore "Baki likhun" ba "Joma likhun" chapun.',
+  showMore: 'Aro dekhun',
+  loadingMore: 'Aro load hocche...',
+  showMoreFailed: 'Aro load hoyni. Abar chapun.',
+  balanceAfter: 'Tarpor',
+
+  // Quick entry / edit on the khata screen
+  quickEntryTitle: (type: string, name: string) => `${name}: ${type} likhun`,
+  editTransactionTitle: 'Hisab thik korun',
+  deleteTransaction: 'Muche felun',
+  deleteConfirmTitle: 'Ei hisab muche felben?',
+  deleteConfirmBody: (amount: string, type: string, when: string) =>
+    `${when}-er ${amount} ${type} muche jabe. Ar fire pawa jabe na.`,
+  deleteConfirmYes: 'Hya, muche felun',
+  deleteConfirmNo: 'Na, rakhun',
+  deleting: 'Muchchi...',
+  savedEntry: 'Save hoyeche',
+  deletedEntry: 'Muche fela hoyeche',
+  deleteFailed: 'Muchte pareni. Abar chesta korun.',
+
+  // Reminder
+  reminderTitle: (name: string) => `${name}-ke reminder`,
+  reminderLoading: 'Message toiri hocche...',
+  reminderFailed: 'Message toiri hoyni. Abar chesta korun.',
+  reminderLabel: 'Message (dorkar hole bodlate paren)',
+  reminderHint: 'WhatsApp khulbe, message lekha thakbe. Apni dekhe "Send" chapben.',
+  reminderNoPhone: 'Ei customer-er phone number nei. Message copy kore nije pathan.',
+  openWhatsApp: 'WhatsApp-e khulun',
+  copyMessage: 'Message copy korun',
+  copied: 'Copy hoyeche!',
+  copyFailed: 'Copy hoyni. Message chepe dhore nije copy korun.',
+
+  // Dashboard
+  dashboardTitle: 'Dashboard',
+  totalBaki: 'Mot baki',
+  totalBakiFrom: (count: number) => `${count} jon customer-er kache`,
+  todayPayment: 'Ajker joma',
+  todayNewCredit: 'Ajker notun baki',
+  weekTitle: 'Shesh 7 din',
+  weekLegendCredit: 'Notun baki',
+  weekLegendPayment: 'Joma',
+  weekDayDetail: (day: string, credit: string, payment: string) => `${day}: notun baki ${credit}, joma ${payment}`,
+  weekTableCaption: 'Shesh 7 diner notun baki ar joma',
+  weekDay: 'Din',
+  weekEmpty: 'Shesh 7 dine kono hisab nei.',
+  weekMax: (amount: string) => `shorbochcho ${amount}`,
+  topTitle: 'Shobcheye beshi baki',
+  topEmpty: 'Karo kache baki nei.',
+  overdueTitle: (days: number) => `${days} diner beshi purono baki`,
+  overdueEmpty: (days: number) => `${days} diner beshi purono baki karo nei.`,
+  overdueSince: (days: number) => `${days} din dhore`,
+  dashboardFailed: 'Dashboard load hoyni.',
 
   // Errors. Each one ends by telling the shopkeeper what to do next.
   errors: {

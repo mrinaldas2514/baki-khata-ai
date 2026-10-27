@@ -1,3 +1,5 @@
+from datetime import UTC, datetime, timedelta
+
 from tests.conftest import error_messages
 
 
@@ -122,3 +124,22 @@ def test_get_missing_customer(client, shop):
 def test_cannot_read_customer_through_another_shop(client, customer):
     other = client.post("/shops", json={"name": "Other", "owner_name": "X"}).json()
     assert client.get(f"/shops/{other['id']}/customers/{customer['id']}").status_code == 404
+
+
+def test_list_shows_how_old_each_baki_is(client, shop, make_customer, add_txn):
+    now = datetime.now(UTC)
+    old = make_customer("Old")
+    add_txn(old["id"], "credit", 100, created_at=(now - timedelta(days=40)).isoformat())
+    add_txn(old["id"], "credit", 50, created_at=(now - timedelta(days=5)).isoformat())
+    add_txn(old["id"], "payment", 100)  # pays off the 40-day-old credit first
+    settled = make_customer("Settled")
+    add_txn(settled["id"], "credit", 70)
+    add_txn(settled["id"], "payment", 70)
+    make_customer("Nothing yet")
+
+    listed = {c["name"]: c for c in client.get(f"/shops/{shop['id']}/customers").json()}
+    owed_since = datetime.fromisoformat(listed["Old"]["owed_since"])
+    assert abs(owed_since - (now - timedelta(days=5))) < timedelta(seconds=5)
+    assert listed["Old"]["balance"] == 50
+    assert listed["Settled"]["owed_since"] is None
+    assert listed["Nothing yet"]["owed_since"] is None

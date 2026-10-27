@@ -2,8 +2,8 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.models import Customer, Transaction
-from app.schemas import CustomerCreate, CustomerRead
-from app.services.balance import balance_sql, get_customer_balance
+from app.schemas import CustomerCreate, CustomerListItem, CustomerRead
+from app.services.balance import balance_sql, get_customer_balance, get_owed_since
 from app.services.exceptions import ConflictError, NotFoundError
 from app.services.shops import get_shop
 
@@ -68,8 +68,10 @@ def get_customer_with_balance(db: Session, shop_id: int, customer_id: int) -> Cu
     return to_customer_read(customer, get_customer_balance(db, customer.id))
 
 
-def list_customers(db: Session, shop_id: int, search: str | None = None) -> list[CustomerRead]:
-    """All customers of a shop with their balances, sorted by name."""
+def list_customers(
+    db: Session, shop_id: int, search: str | None = None
+) -> list[CustomerListItem]:
+    """All customers of a shop with their balances (and how old their baki is), sorted by name."""
     get_shop(db, shop_id)
     stmt = (
         select(Customer, balance_sql())
@@ -87,4 +89,12 @@ def list_customers(db: Session, shop_id: int, search: str | None = None) -> list
                 Customer.phone.contains(term, autoescape=True),
             )
         )
-    return [to_customer_read(customer, int(balance)) for customer, balance in db.execute(stmt)]
+    rows = [(customer, int(balance)) for customer, balance in db.execute(stmt)]
+    owed_since = get_owed_since(db, [customer.id for customer, balance in rows if balance > 0])
+    return [
+        CustomerListItem(
+            **to_customer_read(customer, balance).model_dump(),
+            owed_since=owed_since.get(customer.id),
+        )
+        for customer, balance in rows
+    ]

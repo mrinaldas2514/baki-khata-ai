@@ -8,12 +8,18 @@ This repository contains:
 - a **backend**: a REST API built with FastAPI, SQLAlchemy and Pydantic, plus an **AI parsing
   layer** that turns one free-form sentence ("rahim bhai 2 kg chal 120 taka baki") into a
   transaction preview;
-- a **frontend**: a mobile-first React app with one screen. Type or speak a sentence, check
-  the confirmation card, save.
+- a **frontend**: a mobile-first React app with three tabs: **Hisab** (type or speak a sentence,
+  check the confirmation card, save), **Customer** (everyone's balance, and each customer's
+  khata) and **Dashboard** (what's owed, today's money, old baki).
 
 ## How it works
 
-The whole app is one screen, made for a busy shopkeeper on a cheap Android phone.
+The app is made for a busy shopkeeper on a cheap Android phone (it's checked at 360 px wide).
+Three big tabs sit at the bottom, in thumb reach: **Hisab**, **Customer** and **Dashboard**
+(see [The screens](#the-screens)). The phone's back button works between them, because each
+screen has its own address (`#/customers`, `#/customers/7`, `#/dashboard`).
+
+### Hisab: writing an entry
 
 1. **Write.** A big box asks *"Ki hisab likhben?"* ("What do you want to note?"). The
    shopkeeper types one sentence the way they'd say it: `salma apa pach sho taka baki, dal r tel`.
@@ -40,6 +46,73 @@ name or amount) the app says so in plain words and opens the same form empty, so
 can still write the entry by hand. If the AI isn't sure (confidence below 0.6), its guess opens
 in the form to be checked instead of in the confirmation card. The original sentence is always
 saved as `raw_text`.
+
+Tapping an entry in the list below the box opens that customer's khata.
+
+## The screens
+
+### Customer list
+
+- Every customer with their current balance: **Baki ৳1,200** in red, **✓ Clear** in green (and
+  **Agrim ৳200** in green for someone who paid ahead). Under the name: their area/note and how
+  long the baki has been waiting ("35 din dhore baki").
+- **Sort**: *Beshi baki* (biggest baki first, the default), *Purono baki* (the baki that has
+  waited longest first, by the oldest still-unpaid credit) and *Naam*. Customers who owe nothing
+  come last in both baki sorts.
+- **Search** by name, area/note or phone. It works across scripts and Banglish spellings: `rahim`,
+  `Rohim` and `রহিম` all find Rahim, `ayesha` finds আয়েশা (the same idea as the backend's name
+  matching, in `frontend/src/customers.ts`). Search and sort are kept when you open a khata and
+  come back.
+- Tap a customer to open their khata.
+
+### Customer khata
+
+- At the top: the name, area/note, phone (tap to call) and the current balance in big type.
+- **Baki likhun** / **Joma likhun** open a small form for this customer with the type already
+  picked: amount, item, save.
+- **Reminder pathan** (only when the customer owes something): see [Reminders](#reminders).
+- **The full history**, newest first. Each entry shows the date, item, the original sentence the
+  shopkeeper typed or spoke, the amount (Baki/Joma) and the balance right after it
+  (*Tarpor: Baki ৳800*). It loads 20 at a time; **Aro dekhun** loads older ones.
+- **Tap an entry** to fix its amount, type or item, or to delete it (*Muche felun*). Deleting
+  always asks first (*Ei hisab muche felben?*, with *Na, rakhun* as the safe default). After any
+  change the balance and every running balance on screen are reloaded from the backend.
+
+### Dashboard
+
+- Big numbers: **Mot baki** (total owed, and by how many customers), **Ajker joma** (payments
+  today) and **Ajker notun baki** (new baki today).
+- **Shesh 7 din**: new baki (orange) and joma (green) per day for the last 7 days. Tap a day to
+  read its numbers; screen readers get the same numbers as a table.
+- **Shobcheye beshi baki**: the top 5 customers by baki.
+- **30 diner beshi purono baki**: customers whose oldest unpaid baki is more than 30 days old,
+  oldest first. Every customer in both lists opens their khata.
+
+### Reminders
+
+*Reminder pathan* on a khata asks the backend for a polite Banglish message with the customer's
+name and baki:
+
+```
+Priyo Rahim,
+Ashakori bhalo achen. Demo Dokan-e apnar 1,200 taka baki ache (12 September theke).
+Shubidha moto shodh kore dile khub upokar hoy.
+Dhonnobad,
+Karim, Demo Dokan
+```
+
+The message can be changed in the box. **WhatsApp-e khulun** opens WhatsApp
+(`https://wa.me/<number>?text=...`) with the message typed in; the shopkeeper checks it and
+presses send. **The app never sends anything by itself.** If the customer has no phone number
+(or it can't be used), the app says so and *Message copy korun* copies it to paste anywhere.
+
+- The message comes from a fixed template, so it works without AI. When Groq is set up the AI
+  may reword it to sound more natural, but its version is only used if it keeps the customer's
+  name and exact amount and adds no numbers of its own; otherwise the template is used. With the
+  rule-based demo parser there is no rewording.
+- Phone numbers are turned into WhatsApp's international form with `PHONE_COUNTRY_CODE`
+  (`880` Bangladesh by default, `91` for India): `01711-000001` → `8801711000001`. Numbers saved
+  with `+` or `00` are used as they are.
 
 ## Running it locally (macOS, step by step)
 
@@ -108,6 +181,8 @@ Try:
 - `tanvir 90 taka baki`: new customer
 - `মিজান কাকা ৩৫০ টাকার চিনি আর আটা নিল`: Bangla script
 - `rina 2 ta saban`: no amount, so the manual form opens
+- the **Customer** tab: sort, search `রহিম` or `ayesha`, open Rahim (Bazar road) and send a reminder
+- the **Dashboard** tab: Rahim and Jasim have baki older than 30 days
 
 **Start over with fresh demo data:** stop the backend, run `python -m app.seed --reset`, start it again.
 
@@ -148,6 +223,7 @@ backend/
 │   ├── main.py          # FastAPI app factory, routers, error handlers
 │   ├── config.py        # Settings from environment variables / .env
 │   ├── database.py      # Engine + per-request session
+│   ├── groq_models.py   # startup check: logs a clear error if Groq rejects a configured model
 │   ├── time_utils.py    # UTC / shop-local-time helpers
 │   ├── llm/             # LLM interface, Groq client, rule-based demo parser
 │   ├── stt/             # speech-to-text interface and the Groq Whisper client
@@ -155,7 +231,8 @@ backend/
 │   ├── schemas/         # Pydantic request/response models and validation
 │   ├── routers/         # HTTP endpoints (thin, just call services)
 │   └── services/        # Business logic (balance, customers, transactions, dashboard,
-│                        #   parsing, parse_prompt, number_words, name_matching, transcription)
+│                        #   reminders, parsing, parse_prompt, number_words, name_matching,
+│                        #   transcription)
 ├── tests/               # pytest suite (the LLM and speech-to-text are always faked)
 │   └── fixtures/eval_sentences.json   # example sentences + expected output
 ├── app/seed.py          # demo shop: python -m app.seed
@@ -165,11 +242,17 @@ backend/
 └── .env.example
 frontend/                # React + Vite + TypeScript + Tailwind
 ├── src/
-│   ├── App.tsx          # the one screen and its steps (entry → confirm/edit → saved)
+│   ├── App.tsx          # the shell: title bar, current screen, bottom tabs
+│   ├── route.ts         # which screen is open, kept in the URL hash (#/customers/7)
+│   ├── screens/         # HisabScreen (entry → confirm/edit → saved), CustomersScreen,
+│   │                    #   KhataScreen, DashboardScreen
+│   ├── customers.ts     # customer list search (Bangla ↔ English) and sorting
+│   ├── reminder.ts      # wa.me link and copy-to-clipboard
 │   ├── strings.ts       # every UI text, in Banglish (add a Bangla/English set here later)
 │   ├── config.ts        # VITE_API_URL, VITE_SHOP_ID
 │   ├── api/             # fetch client and the backend's JSON types
-│   ├── components/      # SmartEntry, MicButton, ConfirmationCard, EntryForm, RecentTransactions...
+│   ├── components/      # SmartEntry, MicButton, ConfirmationCard, EntryForm, BottomNav,
+│   │                    #   TransactionForm, ReminderSheet, WeekChart, Dialog...
 │   ├── voice/           # speech engines (browser / server), useVoiceInput, voice settings
 │   └── test/            # test setup, the fetch mock and the speech API mocks
 └── .env.example
@@ -211,11 +294,13 @@ balance = (sum of all credit amounts) − (sum of all payment amounts)
 
 Because the balance is always recalculated from the transactions, editing or deleting a
 transaction automatically gives the correct new balance. Nothing can drift out of sync.
-The logic lives in one place, `app/services/balance.py`, with a pure-Python version (used for
-running balances) and an identical SQL version (used to sum many customers at once).
+The logic lives in one place, `app/services/balance.py`, with a pure-Python version and an
+identical SQL version (used to sum many customers at once, and for running balances).
 
 - **Running balance**: the customer's transactions are sorted oldest first, and each row
-  shows the balance right after it.
+  shows the balance right after it. It's worked out in the database with a window function over
+  the customer's whole history, so a page of a long khata (newest 20, say) shows exactly the same
+  numbers as the full list.
 - **Total outstanding baki** (dashboard): the sum of *positive* balances only. A customer who
   paid in advance doesn't reduce what other customers owe.
 - **Baki older than 30 days** (dashboard): payments are applied to the oldest credits first
@@ -241,15 +326,16 @@ Interactive docs are available at `http://localhost:8000/docs` once the server i
 | POST | `/shops` | Create a shop |
 | GET | `/shops/{shop_id}` | Get a shop |
 | POST | `/shops/{shop_id}/customers` | Create a customer |
-| GET | `/shops/{shop_id}/customers?search=` | List customers with balances (optional search by name/note/phone) |
+| GET | `/shops/{shop_id}/customers?search=` | List customers with balances and `owed_since` (date of the oldest unpaid credit, or null); optional search by name/note/phone |
 | GET | `/shops/{shop_id}/customers/{customer_id}` | Get one customer with current balance |
 | POST | `/shops/{shop_id}/customers/{customer_id}/transactions` | Create a transaction (response includes the new balance) |
-| GET | `/shops/{shop_id}/customers/{customer_id}/transactions` | Customer ledger with running balance |
+| GET | `/shops/{shop_id}/customers/{customer_id}/transactions?order=newest&limit=20&offset=0` | Customer ledger with running balance. `order`: `oldest` (default) or `newest`; `limit` (1–200, default all) and `offset` page through it; the answer has `total` and `has_more` |
+| POST | `/shops/{shop_id}/customers/{customer_id}/reminder` | A polite Banglish baki reminder (`message`, `polished`, `phone`, `whatsapp_number`). Body optional: `{"polish": false}` skips the AI. Sends and saves nothing; `409` if nothing is owed |
 | GET | `/shops/{shop_id}/transactions?limit=10` | The shop's latest transactions (all customers), newest first, with customer name and note |
 | GET | `/shops/{shop_id}/transactions/{transaction_id}` | Get one transaction |
 | PATCH | `/shops/{shop_id}/transactions/{transaction_id}` | Edit a transaction (only the fields you send) |
 | DELETE | `/shops/{shop_id}/transactions/{transaction_id}` | Delete a transaction (204) |
-| GET | `/shops/{shop_id}/dashboard?overdue_days=30` | Total outstanding, today's collection, top 5, overdue customers |
+| GET | `/shops/{shop_id}/dashboard?overdue_days=30` | Total outstanding, today's collection and new baki, top 5, overdue customers, and `last_7_days` (`date`, `credit`, `payment` per local day, oldest first) |
 | POST | `/shops/{shop_id}/parse` | Turn one free-form sentence into a transaction **preview** (saves nothing) |
 | POST | `/shops/{shop_id}/parse/confirm` | Save the confirmed preview, creating the customer if new |
 | POST | `/transcribe` | A short voice recording (multipart `file`, optional `language`) → `{"text": "..."}` (saves nothing) |
@@ -310,11 +396,12 @@ Don't commit `.env`; it's already in `.gitignore`.
 | `CORS_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | Comma-separated browser origins allowed to call the API (the frontend) |
 | `LLM_PROVIDER` | `auto` | `auto`: Groq when `GROQ_API_KEY` is set, otherwise the rule-based demo parser. `groq`: always Groq (503 without a key). `fake`: always the demo parser |
 | `GROQ_API_KEY` | *(empty)* | Groq API key for AI parsing |
-| `GROQ_MODEL` | `llama-3.3-70b-versatile` | Groq chat model; must support JSON mode |
+| `GROQ_MODEL` | `openai/gpt-oss-120b` | Groq chat model for parsing and reminder wording; must support JSON mode |
 | `LLM_TIMEOUT_SECONDS` | `20` | How long to wait for the model (also used for transcription) |
 | `GROQ_STT_MODEL` | `whisper-large-v3` | Groq speech-to-text model for `POST /transcribe` (`whisper-large-v3-turbo` is faster and cheaper, a little weaker on Bangla) |
 | `STT_MAX_AUDIO_BYTES` | `1000000` | Largest recording `POST /transcribe` accepts (413 above it) |
 | `STT_MAX_AUDIO_SECONDS` | `30` | Longest recording; the app stops recording at this point too |
+| `PHONE_COUNTRY_CODE` | `880` | Country calling code for WhatsApp reminder links (`91` for India) |
 
 ### Switching to PostgreSQL
 
@@ -353,12 +440,28 @@ first parse so it's clear which one is running.
 
    ```bash
    GROQ_API_KEY=gsk_your_key_here
-   GROQ_MODEL=llama-3.3-70b-versatile
+   GROQ_MODEL=openai/gpt-oss-120b
    ```
 
    Any model listed at https://console.groq.com/docs/models that supports JSON mode works.
-   If Groq retires the default model, just change `GROQ_MODEL`.
-3. Restart `uvicorn` and try it:
+   `openai/gpt-oss-120b` is a reasoning model; the backend asks it for low reasoning effort,
+   which is plenty for one sentence and keeps parsing fast.
+3. **If Groq retires a model** (as it did `llama-3.3-70b-versatile`, the old default, in 2026):
+   at startup the backend asks Groq about `GROQ_MODEL` and `GROQ_STT_MODEL` and logs an error
+   such as
+
+   ```
+   Groq rejected GROQ_MODEL='llama-3.3-70b-versatile': The model `llama-3.3-70b-versatile` has
+   been decommissioned and is no longer supported. The model may have been retired or misspelled.
+   Set GROQ_MODEL in backend/.env to a current model from https://console.groq.com/docs/models
+   and restart the backend.
+   ```
+
+   The same message is logged if a request fails later because of the model. Change the setting
+   in `backend/.env` and restart. The check runs in the background and never stops the backend
+   from starting (no internet only gives a warning). Check
+   https://console.groq.com/docs/deprecations from time to time.
+4. Restart `uvicorn` and try it:
 
    ```bash
    curl -X POST localhost:8000/shops/1/parse -H 'content-type: application/json' \
@@ -597,9 +700,12 @@ npm run lint        # oxlint
 npm run format      # Prettier
 ```
 
-The frontend tests drive the real screen with the backend mocked (`src/test/mockApi.ts`
+The frontend tests drive the real screens with the backend mocked (`src/test/mockApi.ts`
 replaces `fetch`): the confirmation card for a matched, fuzzy, ambiguous and new customer, edit
-mode, saving, and every error falling back to manual entry. The voice tests
+mode, saving, and every error falling back to manual entry; the bottom tabs; the customer list's
+sorting and search in both scripts (`src/CustomerList.test.tsx`, `src/customers.test.ts`); the
+khata's running balance, *Aro dekhun*, edit, delete with its confirm, quick baki/joma and the
+WhatsApp reminder (`src/Khata.test.tsx`); and the dashboard (`src/Dashboard.test.tsx`). The voice tests
 (`src/VoiceInput.test.tsx`) replace the speech APIs (`src/test/mockSpeech.ts`: a fake
 `SpeechRecognition`, `MediaRecorder` and microphone) and cover the mic button's states, hold vs.
 tap vs. keyboard, the transcript going through the normal flow, auto-submit, saved settings,
@@ -619,11 +725,10 @@ TEST_DATABASE_URL=postgresql+psycopg://user:password@localhost:5432/baki_test py
 
 - Alembic migrations (tables are currently created with `create_all` on startup)
 - Authentication: one login per shop, and taking `shop_id` from the token instead of the URL
-- Pagination for long customer ledgers
 - Measure voice accuracy: a few recorded Banglish sentences run through both engines and
   `/parse`, to choose the default engine and Whisper model with numbers
 - A Bangla-script / English switch for the UI (all texts are in `frontend/src/strings.ts`)
 - An accuracy script that runs `eval_sentences.json` against the real model
 - Store the AI's original parse next to the confirmed values, to measure how often shopkeepers correct it
-- Customer list and per-customer ledger screens in the frontend
+- Add and edit customers (name, area, phone) from the app, and change an entry's date
 - Offline support (queue entries while the phone has no internet)

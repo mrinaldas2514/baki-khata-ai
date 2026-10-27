@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.orm import Session
@@ -27,8 +27,22 @@ def create_transaction(shop_id: int, customer_id: int, data: TransactionCreate, 
 
 
 @router.get("/customers/{customer_id}/transactions", response_model=CustomerLedger)
-def list_customer_transactions(shop_id: int, customer_id: int, db: DB):
-    return service.get_customer_ledger(db, shop_id, customer_id)
+def list_customer_transactions(
+    shop_id: int,
+    customer_id: int,
+    db: DB,
+    order: Annotated[
+        Literal["oldest", "newest"], Query(description="oldest first (default) or newest first")
+    ] = "oldest",
+    limit: Annotated[
+        int | None, Query(ge=1, le=200, description="Page size. Leave out for all of them.")
+    ] = None,
+    offset: Annotated[int, Query(ge=0, description="How many to skip")] = 0,
+):
+    """The customer's khata with a running balance. Page through it with limit/offset."""
+    return service.get_customer_ledger(
+        db, shop_id, customer_id, order=order, limit=limit, offset=offset
+    )
 
 
 @router.get("/transactions", response_model=list[RecentTransaction])

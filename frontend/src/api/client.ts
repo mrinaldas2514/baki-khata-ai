@@ -1,10 +1,15 @@
 import { API_URL, SHOP_ID } from '../config'
 import type {
-  Customer,
+  CustomerLedger,
+  CustomerListItem,
+  Dashboard,
   ParseConfirm,
   ParseConfirmResult,
   ParsePreview,
   RecentTransaction,
+  Reminder,
+  TransactionInput,
+  TransactionWithBalance,
   TranscribeResult,
   TranscribeStatus,
 } from './types'
@@ -48,7 +53,8 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     const body = await response.json().catch(() => null)
     throw new ApiError('http', response.status, body?.detail ?? response.statusText, body?.errors ?? [])
   }
-  return (await response.json()) as T
+  // 204 No Content (a delete) has no body.
+  return (response.status === 204 ? undefined : await response.json()) as T
 }
 
 const shop = `/shops/${SHOP_ID}`
@@ -63,7 +69,30 @@ export const api = {
 
   recentTransactions: (limit = 10) => request<RecentTransaction[]>(`${shop}/transactions?limit=${limit}`),
 
-  customers: () => request<Customer[]>(`${shop}/customers`),
+  customers: () => request<CustomerListItem[]>(`${shop}/customers`),
+
+  /** One page of a customer's khata, newest first, each row with the balance right after it. */
+  ledger: (customerId: number, { limit, offset = 0 }: { limit: number; offset?: number }) =>
+    request<CustomerLedger>(
+      `${shop}/customers/${customerId}/transactions?order=newest&limit=${limit}&offset=${offset}`,
+    ),
+
+  addTransaction: (customerId: number, data: TransactionInput) =>
+    request<TransactionWithBalance>(`${shop}/customers/${customerId}/transactions`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateTransaction: (id: number, data: Partial<TransactionInput>) =>
+    request<TransactionWithBalance>(`${shop}/transactions/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  deleteTransaction: (id: number) => request<void>(`${shop}/transactions/${id}`, { method: 'DELETE' }),
+
+  dashboard: () => request<Dashboard>(`${shop}/dashboard`),
+
+  /** A polite reminder message for the customer's baki. Nothing is sent: the shopkeeper sends it. */
+  reminder: (customerId: number) =>
+    request<Reminder>(`${shop}/customers/${customerId}/reminder`, { method: 'POST', body: '{}' }),
 
   /** Whether the server can turn recordings into text (it needs a Groq key), and its limits. */
   transcribeStatus: () => request<TranscribeStatus>('/transcribe/status'),
