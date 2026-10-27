@@ -1,3 +1,4 @@
+import json
 import os
 from collections.abc import Generator
 
@@ -35,9 +36,36 @@ def db(engine: Engine) -> Generator[Session]:
         yield session
 
 
+class FakeLLM:
+    """Stands in for the real model so tests never call Groq or need an API key.
+
+    Queue answers with `reply(...)`: a dict is sent as JSON, a str as-is, an exception is raised.
+    """
+
+    def __init__(self) -> None:
+        self.answers: list[object] = []
+        self.calls: list[list[dict]] = []
+
+    def reply(self, *answers: object) -> None:
+        self.answers.extend(answers)
+
+    def complete_json(self, messages: list[dict]) -> str:
+        self.calls.append([dict(m) for m in messages])
+        assert self.answers, "FakeLLM was called more times than answers were queued"
+        answer = self.answers.pop(0)
+        if isinstance(answer, Exception):
+            raise answer
+        return answer if isinstance(answer, str) else json.dumps(answer, ensure_ascii=False)
+
+
 @pytest.fixture
-def client(engine: Engine) -> Generator[TestClient]:
-    with TestClient(create_app(engine)) as test_client:
+def fake_llm() -> FakeLLM:
+    return FakeLLM()
+
+
+@pytest.fixture
+def client(engine: Engine, fake_llm: FakeLLM) -> Generator[TestClient]:
+    with TestClient(create_app(engine, llm_client=fake_llm)) as test_client:
         yield test_client
 
 

@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Transaction
+from app.models import Customer, Transaction
 from app.schemas import (
     CustomerLedger,
     LedgerEntry,
@@ -17,7 +17,7 @@ from app.services.shops import get_shop
 from app.time_utils import utc_now
 
 
-def _with_balance(db: Session, txn: Transaction) -> TransactionWithBalance:
+def with_balance(db: Session, txn: Transaction) -> TransactionWithBalance:
     return TransactionWithBalance(
         **TransactionRead.model_validate(txn).model_dump(),
         customer_balance=get_customer_balance(db, txn.customer_id),
@@ -27,14 +27,20 @@ def _with_balance(db: Session, txn: Transaction) -> TransactionWithBalance:
 def create_transaction(
     db: Session, shop_id: int, customer_id: int, data: TransactionCreate
 ) -> TransactionWithBalance:
-    customer = get_customer(db, shop_id, customer_id)
-    values = data.model_dump()
-    values["created_at"] = values["created_at"] or utc_now()
-    txn = Transaction(shop_id=shop_id, customer_id=customer.id, **values)
-    db.add(txn)
+    txn = add_transaction(db, get_customer(db, shop_id, customer_id), data)
     db.commit()
     db.refresh(txn)
-    return _with_balance(db, txn)
+    return with_balance(db, txn)
+
+
+def add_transaction(db: Session, customer: Customer, data: TransactionCreate) -> Transaction:
+    """Add a transaction for the customer to the session without committing."""
+    values = data.model_dump()
+    values["created_at"] = values["created_at"] or utc_now()
+    txn = Transaction(shop_id=customer.shop_id, customer_id=customer.id, **values)
+    db.add(txn)
+    db.flush()
+    return txn
 
 
 def get_transaction(db: Session, shop_id: int, transaction_id: int) -> Transaction:
@@ -48,7 +54,7 @@ def get_transaction(db: Session, shop_id: int, transaction_id: int) -> Transacti
 def get_transaction_with_balance(
     db: Session, shop_id: int, transaction_id: int
 ) -> TransactionWithBalance:
-    return _with_balance(db, get_transaction(db, shop_id, transaction_id))
+    return with_balance(db, get_transaction(db, shop_id, transaction_id))
 
 
 def update_transaction(
@@ -59,7 +65,7 @@ def update_transaction(
         setattr(txn, field, value)
     db.commit()
     db.refresh(txn)
-    return _with_balance(db, txn)
+    return with_balance(db, txn)
 
 
 def delete_transaction(db: Session, shop_id: int, transaction_id: int) -> None:
