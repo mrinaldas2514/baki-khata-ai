@@ -14,6 +14,7 @@ __all__ = [
     "LLMProviderError",
     "build_llm_client",
     "get_llm_client",
+    "get_writing_llm_client",
 ]
 
 logger = logging.getLogger(__name__)
@@ -54,3 +55,17 @@ def get_llm_client(request: Request) -> LLMClient:
         client = build_llm_client(get_settings())
         request.app.state.llm_client = client
     return client
+
+
+def get_writing_llm_client(request: Request) -> LLMClient | None:
+    """FastAPI dependency for optional AI writing help (reminder wording): None without a model.
+
+    The rule-based demo parser can only parse, so it counts as no model here.
+    """
+    try:
+        client = get_llm_client(request)
+    except LLMNotConfiguredError:
+        return None
+    from app.llm.rule_based import RuleBasedLLMClient
+
+    return None if isinstance(client, RuleBasedLLMClient) else client

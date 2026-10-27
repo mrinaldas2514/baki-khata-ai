@@ -13,6 +13,12 @@ export interface Customer {
   balance: number
 }
 
+/** A row of the customer list. */
+export interface CustomerListItem extends Customer {
+  /** When the oldest still-unpaid credit was given. Null when nothing is owed. */
+  owed_since: string | null
+}
+
 export interface CustomerCandidate extends Customer {
   score: number
 }
@@ -51,6 +57,71 @@ export interface Transaction {
 export interface RecentTransaction extends Transaction {
   customer_name: string
   customer_note: string | null
+}
+
+export interface LedgerEntry extends Transaction {
+  /** The customer's balance right after this transaction. */
+  running_balance: number
+}
+
+/** One page of a customer's khata. */
+export interface CustomerLedger {
+  customer: Customer
+  transactions: LedgerEntry[]
+  total: number
+  has_more: boolean
+}
+
+export interface TransactionWithBalance extends Transaction {
+  customer_balance: number
+}
+
+export interface TransactionInput {
+  type: TransactionType
+  amount: number
+  item: string | null
+  raw_text?: string | null
+}
+
+export interface CustomerBalanceSummary {
+  id: number
+  name: string
+  phone: string | null
+  note: string | null
+  balance: number
+}
+
+export interface OverdueCustomer extends CustomerBalanceSummary {
+  owed_since: string
+  days_outstanding: number
+}
+
+export interface DaySummary {
+  /** The shop's local date, YYYY-MM-DD. */
+  date: string
+  credit: number
+  payment: number
+}
+
+export interface Dashboard {
+  total_outstanding: number
+  customers_with_baki: number
+  today: string
+  today_collection: number
+  today_new_credit: number
+  top_customers: CustomerBalanceSummary[]
+  overdue_days: number
+  overdue_customers: OverdueCustomer[]
+  /** Oldest first, ending with today. */
+  last_7_days: DaySummary[]
+}
+
+export interface Reminder {
+  message: string
+  polished: boolean
+  phone: string | null
+  /** Digits only, with the country code, for https://wa.me/<number>. Null without a usable phone. */
+  whatsapp_number: string | null
 }
 
 export interface ParseConfirm {

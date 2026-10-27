@@ -10,7 +10,8 @@ The balance is never stored; it is always worked out from the transactions, so
 editing or deleting a transaction automatically corrects it.
 """
 
-from collections.abc import Iterable, Sequence
+from collections import defaultdict
+from collections.abc import Collection, Iterable, Sequence
 from datetime import datetime
 from typing import Protocol
 
@@ -64,13 +65,27 @@ def oldest_unpaid_credit_at(transactions: Sequence[TransactionLike]) -> datetime
     return None
 
 
-def balance_sql():
-    """SQL expression for the same calculation, so balances can be summed in the database."""
-    signed = case(
+def _signed_amount_sql():
+    return case(
         (Transaction.type == TransactionType.CREDIT, Transaction.amount),
         else_=-Transaction.amount,
     )
-    return func.coalesce(func.sum(signed), 0)
+
+
+def balance_sql():
+    """SQL expression for the same calculation, so balances can be summed in the database."""
+    return func.coalesce(func.sum(_signed_amount_sql()), 0)
+
+
+def running_balance_sql():
+    """SQL version of `running_balances`: the balance after each row, for one customer's rows.
+
+    A window function, so one page of a long ledger can be read without loading the rest.
+    """
+    return func.sum(_signed_amount_sql()).over(
+        partition_by=Transaction.customer_id,
+        order_by=(Transaction.created_at, Transaction.id),
+    )
 
 
 def get_customer_balance(db: Session, customer_id: int) -> int:
@@ -86,3 +101,18 @@ def get_shop_balances(db: Session, shop_id: int) -> dict[int, int]:
         .group_by(Transaction.customer_id)
     )
     return {customer_id: int(balance) for customer_id, balance in db.execute(stmt)}
+
+
+def get_owed_since(db: Session, customer_ids: Collection[int]) -> dict[int, datetime]:
+    """`oldest_unpaid_credit_at` for each of these customers that still owes something."""
+    if not customer_ids:
+        return {}
+    by_customer: dict[int, list[Transaction]] = defaultdict(list)
+    for txn in db.scalars(select(Transaction).where(Transaction.customer_id.in_(customer_ids))):
+        by_customer[txn.customer_id].append(txn)
+    result = {}
+    for customer_id, txns in by_customer.items():
+        owed_since = oldest_unpaid_credit_at(txns)
+        if owed_since is not None:
+            result[customer_id] = owed_since
+    return result

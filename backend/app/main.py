@@ -12,6 +12,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.config import get_settings
 from app.database import build_engine, create_tables
+from app.groq_models import start_model_check
 from app.llm import LLMClient, LLMNotConfiguredError, LLMProviderError
 from app.routers import customers, dashboard, parse, shops, transactions, transcribe
 from app.services.exceptions import ConflictError, NotFoundError
@@ -35,6 +36,9 @@ def create_app(
     async def lifespan(app: FastAPI):
         # Fine for now; switch to Alembic migrations once the schema starts changing.
         create_tables(engine)
+        if llm_client is None or stt_client is None:
+            # Logs a clear error if Groq has retired (or never had) a configured model.
+            start_model_check(settings)
         yield
 
     app = FastAPI(title=settings.app_name, version="0.1.0", lifespan=lifespan)

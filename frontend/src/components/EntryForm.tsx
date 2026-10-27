@@ -4,9 +4,8 @@ import type { Customer, TransactionType } from '../api/types'
 import type { CustomerChoice, Draft, FormValues } from '../entry'
 import { parseAmount } from '../format'
 import { strings } from '../strings'
-import { TYPE_STYLES } from '../typeStyles'
 import { CustomerOption } from './CustomerSummary'
-import { Alert, Button } from './ui'
+import { Alert, AmountInput, Button, TypeToggle, inputClass } from './ui'
 
 interface Props {
   title: string
@@ -170,53 +169,16 @@ export function EntryForm({
           <label htmlFor="entry-amount" className="text-xl font-semibold text-stone-900">
             {strings.amount}
           </label>
-          <div className="relative">
-            <span className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-3xl text-stone-500">
-              ৳
-            </span>
-            <input
-              id="entry-amount"
-              value={amountText}
-              onChange={(event) => setAmountText(event.target.value)}
-              inputMode="numeric"
-              autoComplete="off"
-              aria-invalid={Boolean(problems.amount)}
-              className={`${inputClass} pl-11 text-3xl font-bold tabular-nums`}
-            />
-          </div>
+          <AmountInput
+            id="entry-amount"
+            value={amountText}
+            onChange={setAmountText}
+            invalid={Boolean(problems.amount)}
+          />
           {problems.amount && <p className="text-lg text-red-700">{problems.amount}</p>}
         </div>
 
-        <fieldset className="flex flex-col gap-2">
-          <legend className="mb-2 text-xl font-semibold text-stone-900">{strings.type}</legend>
-          <div className="grid grid-cols-2 gap-3">
-            {(['credit', 'payment'] as const).map((value) => {
-              const style = TYPE_STYLES[value]
-              const checked = type === value
-              return (
-                <label
-                  key={value}
-                  className={`flex min-h-16 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 px-2 text-center has-focus-visible:ring-2 has-focus-visible:ring-stone-900 ${
-                    checked
-                      ? `${style.panel} ring-2 ring-current ${style.text}`
-                      : 'border-stone-300 bg-white text-stone-700'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="entry-type"
-                    value={value}
-                    checked={checked}
-                    onChange={() => setType(value)}
-                    className="sr-only"
-                  />
-                  <span className="text-2xl font-bold">{style.label}</span>
-                  <span className="text-sm">{style.hint}</span>
-                </label>
-              )
-            })}
-          </div>
-        </fieldset>
+        <TypeToggle name="entry-type" value={type} onChange={setType} />
 
         <div className="flex flex-col gap-2">
           <label htmlFor="entry-item" className="text-xl font-semibold text-stone-900">
@@ -246,6 +208,3 @@ export function EntryForm({
     </section>
   )
 }
-
-const inputClass =
-  'min-h-14 w-full rounded-2xl border-2 border-stone-300 bg-white px-4 text-xl text-stone-900 placeholder:text-stone-400 focus:border-emerald-600 focus:outline-none aria-invalid:border-red-500'

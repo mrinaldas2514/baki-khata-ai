@@ -2,6 +2,7 @@ import logging
 
 import groq
 
+from app.groq_models import log_if_model_rejected
 from app.stt.base import Language, STTProviderError, Transcript
 
 logger = logging.getLogger(__name__)
@@ -42,6 +43,7 @@ class GroqSTTClient:
                 **options,
             )
         except groq.APIError as exc:
+            log_if_model_rejected(exc, "GROQ_STT_MODEL", self._model)
             logger.warning("Groq transcription failed: %s", exc)
             raise STTProviderError(str(exc)) from exc
 

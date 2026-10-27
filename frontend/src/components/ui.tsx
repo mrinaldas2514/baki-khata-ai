@@ -1,15 +1,24 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import type { AnchorHTMLAttributes, ComponentProps, ReactNode } from 'react'
 import type { TransactionType } from '../api/types'
+import { strings } from '../strings'
 import { TYPE_STYLES } from '../typeStyles'
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger'
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'destructive' | 'whatsapp' | 'credit' | 'payment'
 
 const VARIANTS: Record<Variant, string> = {
   primary: 'bg-emerald-700 text-white active:bg-emerald-800 disabled:bg-stone-400',
   secondary: 'bg-white text-stone-900 border-2 border-stone-300 active:bg-stone-100 disabled:text-stone-400',
   ghost: 'bg-transparent text-stone-700 underline-offset-4 active:bg-stone-100',
   danger: 'bg-white text-red-700 border-2 border-red-200 active:bg-red-50',
+  // The final "yes, delete it".
+  destructive: 'bg-red-700 text-white active:bg-red-800 disabled:bg-stone-400',
+  whatsapp: 'bg-[#1a7f4b] text-white active:bg-[#14663c]',
+  // "Baki likhun" / "Joma likhun": the same colors as Baki and Joma everywhere else.
+  credit: 'bg-orange-700 text-white active:bg-orange-800',
+  payment: 'bg-green-700 text-white active:bg-green-800',
 }
+
+const BUTTON_BASE = 'min-h-14 rounded-2xl px-5 text-xl font-semibold transition-colors disabled:cursor-not-allowed'
 
 /** A large tap target (at least 56 px high) with big text. */
 export function Button({
@@ -17,11 +26,19 @@ export function Button({
   className = '',
   type = 'button',
   ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant }) {
+}: ComponentProps<'button'> & { variant?: Variant }) {
+  return <button type={type} className={`${BUTTON_BASE} ${VARIANTS[variant]} ${className}`} {...props} />
+}
+
+/** A link that looks like a Button (e.g. "WhatsApp-e khulun"). */
+export function ButtonLink({
+  variant = 'primary',
+  className = '',
+  ...props
+}: AnchorHTMLAttributes<HTMLAnchorElement> & { variant?: Variant }) {
   return (
-    <button
-      type={type}
-      className={`min-h-14 rounded-2xl px-5 text-xl font-semibold transition-colors disabled:cursor-not-allowed ${VARIANTS[variant]} ${className}`}
+    <a
+      className={`${BUTTON_BASE} flex items-center justify-center text-center ${VARIANTS[variant]} ${className}`}
       {...props}
     />
   )
@@ -43,5 +60,83 @@ export function TypeBadge({ type }: { type: TransactionType }) {
     <span className={`inline-block rounded-full border px-3 py-0.5 text-base font-bold ${style.badge}`}>
       {style.label}
     </span>
+  )
+}
+
+export const inputClass =
+  'min-h-14 w-full rounded-2xl border-2 border-stone-300 bg-white px-4 text-xl text-stone-900 placeholder:text-stone-400 focus:border-emerald-600 focus:outline-none aria-invalid:border-red-500'
+
+/** A big taka amount box: "৳" in front, numeric keyboard on phones. */
+export function AmountInput({
+  id,
+  value,
+  onChange,
+  invalid = false,
+  autoFocus = false,
+}: {
+  id: string
+  value: string
+  onChange: (value: string) => void
+  invalid?: boolean
+  autoFocus?: boolean
+}) {
+  return (
+    <div className="relative">
+      <span className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-3xl text-stone-500">৳</span>
+      <input
+        id={id}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        inputMode="numeric"
+        autoComplete="off"
+        autoFocus={autoFocus}
+        aria-invalid={invalid}
+        className={`${inputClass} pl-11 text-3xl font-bold tabular-nums`}
+      />
+    </div>
+  )
+}
+
+/** Baki / Joma as two big radio cards. */
+export function TypeToggle({
+  name,
+  value,
+  onChange,
+}: {
+  name: string
+  value: TransactionType
+  onChange: (value: TransactionType) => void
+}) {
+  return (
+    <fieldset className="flex flex-col gap-2">
+      <legend className="mb-2 text-xl font-semibold text-stone-900">{strings.type}</legend>
+      <div className="grid grid-cols-2 gap-3">
+        {(['credit', 'payment'] as const).map((type) => {
+          const style = TYPE_STYLES[type]
+          const checked = value === type
+          return (
+            <label
+              key={type}
+              className={`flex min-h-16 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 px-2 text-center has-focus-visible:ring-2 has-focus-visible:ring-stone-900 ${
+                checked
+                  ? `${style.panel} ring-2 ring-current ${style.text}`
+                  : 'border-stone-300 bg-white text-stone-700'
+              }`}
+            >
+              <input
+                type="radio"
+                name={name}
+                value={type}
+                checked={checked}
+                onChange={() => onChange(type)}
+                className="sr-only"
+              />
+              <span className="text-2xl font-bold">{style.label}</span>
+              <span className="text-sm">{style.hint}</span>
+            </label>
+          )
+        })}
+      </div>
+    </fieldset>
   )
 }

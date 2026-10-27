@@ -1,5 +1,7 @@
-from sqlalchemy import select
-from sqlalchemy.orm import Session
+from typing import Literal
+
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session, aliased
 
 from app.models import Customer, Transaction
 from app.schemas import (
@@ -11,7 +13,7 @@ from app.schemas import (
     TransactionUpdate,
     TransactionWithBalance,
 )
-from app.services.balance import get_customer_balance, running_balances
+from app.services.balance import get_customer_balance, running_balance_sql
 from app.services.customers import get_customer, to_customer_read
 from app.services.exceptions import NotFoundError
 from app.services.shops import get_shop
@@ -95,19 +97,38 @@ def list_recent_transactions(db: Session, shop_id: int, limit: int) -> list[Rece
     ]
 
 
-def get_customer_ledger(db: Session, shop_id: int, customer_id: int) -> CustomerLedger:
-    """A customer's transactions, oldest first, each with the balance right after it."""
+def get_customer_ledger(
+    db: Session,
+    shop_id: int,
+    customer_id: int,
+    *,
+    order: Literal["oldest", "newest"] = "oldest",
+    limit: int | None = None,
+    offset: int = 0,
+) -> CustomerLedger:
+    """A customer's transactions, each with the balance right after it.
+
+    `order` and `limit`/`offset` pick a page; the running balance always counts the whole
+    history, so the newest page of a long ledger shows the same numbers as the full list.
+    """
     customer = get_customer(db, shop_id, customer_id)
-    stmt = (
-        select(Transaction)
-        .where(Transaction.customer_id == customer.id)
-        .order_by(Transaction.created_at, Transaction.id)
-    )
-    txns = list(db.scalars(stmt))
-    balances = running_balances(txns)
+    with_running = select(
+        Transaction, running_balance_sql().label("running_balance")
+    ).where(Transaction.customer_id == customer.id).subquery()
+    txn = aliased(Transaction, with_running)
+    if order == "newest":
+        sort = (txn.created_at.desc(), txn.id.desc())
+    else:
+        sort = (txn.created_at, txn.id)
+    stmt = select(txn, with_running.c.running_balance).order_by(*sort).offset(offset).limit(limit)
     entries = [
         LedgerEntry(**TransactionRead.model_validate(t).model_dump(), running_balance=b)
-        for t, b in zip(txns, balances, strict=True)
+        for t, b in db.execute(stmt)
     ]
-    final_balance = balances[-1] if balances else 0
-    return CustomerLedger(customer=to_customer_read(customer, final_balance), transactions=entries)
+    total = db.scalar(select(func.count()).where(Transaction.customer_id == customer.id))
+    return CustomerLedger(
+        customer=to_customer_read(customer, get_customer_balance(db, customer.id)),
+        transactions=entries,
+        total=total,
+        has_more=offset + len(entries) < total,
+    )

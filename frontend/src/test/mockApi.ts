@@ -1,38 +1,58 @@
 import { vi } from 'vitest'
-import type { Customer, CustomerCandidate, ParsePreview, RecentTransaction } from '../api/types'
+import type {
+  Customer,
+  CustomerCandidate,
+  CustomerLedger,
+  CustomerListItem,
+  LedgerEntry,
+  ParsePreview,
+  RecentTransaction,
+  TransactionType,
+} from '../api/types'
 
 /** What a mocked endpoint answers: JSON (status 200 unless given), or a thrown network error. */
 export type MockAnswer = { status?: number; body?: unknown } | 'network-error'
-type Handler = MockAnswer | ((body: unknown) => MockAnswer | Promise<MockAnswer>)
+type Handler = MockAnswer | ((body: unknown, query: URLSearchParams) => MockAnswer | Promise<MockAnswer>)
 
 /**
  * Replace `fetch` with fake endpoints, keyed by "METHOD /path" (shop 1, query string ignored).
- * Returns the list of requests made, with their parsed JSON bodies.
+ * Returns the list of requests made, with their parsed JSON bodies and query parameters.
  */
 export function mockApi(handlers: Record<string, Handler>) {
-  const requests: { key: string; body: unknown }[] = []
+  const requests: { key: string; body: unknown; query: URLSearchParams }[] = []
   const fetchMock = vi.fn(async (url: string, init: RequestInit = {}) => {
-    const path = new URL(url).pathname
+    const { pathname: path, searchParams: query } = new URL(url)
     const key = `${init.method ?? 'GET'} ${path}`
     // FormData (an audio upload) is passed through as is; JSON is parsed.
     const body = init.body instanceof FormData ? init.body : init.body ? JSON.parse(String(init.body)) : undefined
-    requests.push({ key, body })
+    requests.push({ key, body, query })
     const handler = handlers[key] ?? { status: 404, body: { detail: `No mock for ${key}` } }
-    const answer = await (typeof handler === 'function' ? handler(body) : handler)
+    const answer = await (typeof handler === 'function' ? handler(body, query) : handler)
     if (answer === 'network-error') throw new TypeError('Failed to fetch')
+    if (answer.status === 204) return new Response(null, { status: 204 })
     return new Response(JSON.stringify(answer.body ?? null), {
       status: answer.status ?? 200,
       headers: { 'Content-Type': 'application/json' },
     })
   })
   vi.stubGlobal('fetch', fetchMock)
-  return { requests, bodiesOf: (key: string) => requests.filter((r) => r.key === key).map((r) => r.body) }
+  return {
+    requests,
+    bodiesOf: (key: string) => requests.filter((r) => r.key === key).map((r) => r.body),
+    queriesOf: (key: string) => requests.filter((r) => r.key === key).map((r) => Object.fromEntries(r.query)),
+  }
 }
 
 export const PARSE = 'POST /shops/1/parse'
 export const CONFIRM = 'POST /shops/1/parse/confirm'
 export const RECENT = 'GET /shops/1/transactions'
 export const CUSTOMERS = 'GET /shops/1/customers'
+export const DASHBOARD = 'GET /shops/1/dashboard'
+export const ledgerKey = (customerId: number) => `GET /shops/1/customers/${customerId}/transactions`
+export const addKey = (customerId: number) => `POST /shops/1/customers/${customerId}/transactions`
+export const reminderKey = (customerId: number) => `POST /shops/1/customers/${customerId}/reminder`
+export const patchKey = (id: number) => `PATCH /shops/1/transactions/${id}`
+export const deleteKey = (id: number) => `DELETE /shops/1/transactions/${id}`
 export const TRANSCRIBE = 'POST /transcribe'
 export const TRANSCRIBE_STATUS = 'GET /transcribe/status'
 
@@ -104,4 +124,45 @@ export function recentRow(id: number, who: Customer, amount: number, type: 'cred
     customer_name: who.name,
     customer_note: who.note,
   }
+}
+
+export function listItem(
+  id: number,
+  name: string,
+  balance: number,
+  {
+    note = null,
+    phone = null,
+    owedSince = null,
+  }: { note?: string | null; phone?: string | null; owedSince?: string | null } = {},
+): CustomerListItem {
+  return { ...customer(id, name, balance, note), phone, owed_since: owedSince }
+}
+
+export function ledgerEntry(
+  id: number,
+  type: TransactionType,
+  amount: number,
+  runningBalance: number,
+  {
+    item = null,
+    rawText = null,
+    createdAt = NOW,
+  }: { item?: string | null; rawText?: string | null; createdAt?: string } = {},
+): LedgerEntry {
+  return {
+    id,
+    shop_id: 1,
+    customer_id: 7,
+    type,
+    amount,
+    item,
+    raw_text: rawText,
+    created_at: createdAt,
+    running_balance: runningBalance,
+  }
+}
+
+export function ledgerPage(who: Customer, rows: LedgerEntry[], total = rows.length, hasMore = false): CustomerLedger {
+  return { customer: who, transactions: rows, total, has_more: hasMore }
 }
