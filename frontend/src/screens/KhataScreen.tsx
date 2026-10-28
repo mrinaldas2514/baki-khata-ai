@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ApiError, api } from '../api/client'
-import type { Customer, LedgerEntry, TransactionInput, TransactionType } from '../api/types'
+import type { Customer, CustomerInput, LedgerEntry, TransactionInput, TransactionType } from '../api/types'
+import { CustomerForm } from '../components/CustomerForm'
 import { ConfirmDialog, Sheet } from '../components/Dialog'
 import { ReminderSheet } from '../components/ReminderSheet'
 import { TransactionForm } from '../components/TransactionForm'
 import { Alert, Button, TypeBadge } from '../components/ui'
 import { saveErrorMessage } from '../errors'
 import { describeBalance, formatDateTime, formatTaka } from '../format'
+import { formatPhone } from '../phone'
 import { href } from '../route'
 import { strings } from '../strings'
 import { TYPE_STYLES, balanceTone } from '../typeStyles'
@@ -28,6 +30,7 @@ type Panel =
   | { kind: 'edit'; entry: LedgerEntry }
   | { kind: 'delete'; entry: LedgerEntry }
   | { kind: 'reminder' }
+  | { kind: 'customer' }
 
 /** One customer's khata: balance on top, quick baki/joma, reminder, and the full history. */
 export function KhataScreen({ customerId }: { customerId: number }) {
@@ -38,6 +41,7 @@ export function KhataScreen({ customerId }: { customerId: number }) {
   const [panel, setPanel] = useState<Panel | null>(null)
   const [busy, setBusy] = useState(false)
   const [panelError, setPanelError] = useState<string | null>(null)
+  const [phoneRejected, setPhoneRejected] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [highlightId, setHighlightId] = useState<number | null>(null)
   const [refreshFailed, setRefreshFailed] = useState(false)
@@ -90,6 +94,27 @@ export function KhataScreen({ customerId }: { customerId: number }) {
   function open(next: Panel | null) {
     setPanel(next)
     setPanelError(null)
+    setPhoneRejected(false)
+  }
+
+  /** The khata shows the new name/phone/note at once; the balance stays as it was. */
+  function showCustomer(updated: Customer) {
+    setLedger((current) => current && { ...current, customer: { ...current.customer, ...updated } })
+  }
+
+  async function saveCustomer(values: CustomerInput) {
+    setBusy(true)
+    setPanelError(null)
+    try {
+      showCustomer(await api.updateCustomer(customerId, values))
+      setPanel(null)
+      setNotice(strings.customerForm.saved)
+    } catch (error) {
+      setPanelError(saveErrorMessage(error))
+      setPhoneRejected(error instanceof ApiError && error.fieldErrors.some((e) => e.field === 'phone'))
+    } finally {
+      setBusy(false)
+    }
   }
 
   async function run(action: () => Promise<number | null>, done: string, extraRows: number) {
@@ -174,11 +199,20 @@ export function KhataScreen({ customerId }: { customerId: number }) {
               href={`tel:${customer.phone}`}
               className="inline-flex min-h-12 items-center text-lg font-semibold text-sky-800 underline underline-offset-4"
             >
-              {strings.call(customer.phone)}
+              {strings.call(formatPhone(customer.phone))}
             </a>
           ) : (
             <p className="text-base text-stone-500">{strings.noPhone}</p>
           )}
+          <div>
+            <button
+              type="button"
+              onClick={() => open({ kind: 'customer' })}
+              className="min-h-12 rounded-xl border-2 border-stone-300 px-4 text-lg font-semibold text-stone-800 active:bg-stone-100"
+            >
+              ✎ {strings.customerForm.editButton}
+            </button>
+          </div>
         </div>
 
         <div
@@ -318,7 +352,21 @@ export function KhataScreen({ customerId }: { customerId: number }) {
           onCancel={() => open(null)}
         />
       )}
-      {panel?.kind === 'reminder' && <ReminderSheet customer={customer} onClose={() => open(null)} />}
+      {panel?.kind === 'reminder' && (
+        <ReminderSheet customer={customer} onClose={() => open(null)} onCustomerUpdated={showCustomer} />
+      )}
+      {panel?.kind === 'customer' && (
+        <Sheet title={strings.customerForm.editTitle} onClose={() => !busy && open(null)}>
+          <CustomerForm
+            initial={customer}
+            saving={busy}
+            error={panelError}
+            phoneRejected={phoneRejected}
+            onSave={saveCustomer}
+            onCancel={() => open(null)}
+          />
+        </Sheet>
+      )}
     </div>
   )
 }

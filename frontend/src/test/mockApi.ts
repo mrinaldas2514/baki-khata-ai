@@ -1,5 +1,7 @@
 import { vi } from 'vitest'
+import type { Session } from '../session'
 import type {
+  AuthResult,
   Customer,
   CustomerCandidate,
   CustomerLedger,
@@ -8,6 +10,7 @@ import type {
   ParsePreview,
   RecentTransaction,
   TransactionType,
+  User,
 } from '../api/types'
 
 /** What a mocked endpoint answers: JSON (status 200 unless given), or a thrown network error. */
@@ -19,13 +22,13 @@ type Handler = MockAnswer | ((body: unknown, query: URLSearchParams) => MockAnsw
  * Returns the list of requests made, with their parsed JSON bodies and query parameters.
  */
 export function mockApi(handlers: Record<string, Handler>) {
-  const requests: { key: string; body: unknown; query: URLSearchParams }[] = []
+  const requests: { key: string; body: unknown; query: URLSearchParams; headers: Headers }[] = []
   const fetchMock = vi.fn(async (url: string, init: RequestInit = {}) => {
     const { pathname: path, searchParams: query } = new URL(url)
     const key = `${init.method ?? 'GET'} ${path}`
     // FormData (an audio upload) is passed through as is; JSON is parsed.
     const body = init.body instanceof FormData ? init.body : init.body ? JSON.parse(String(init.body)) : undefined
-    requests.push({ key, body, query })
+    requests.push({ key, body, query, headers: new Headers(init.headers) })
     const handler = handlers[key] ?? { status: 404, body: { detail: `No mock for ${key}` } }
     const answer = await (typeof handler === 'function' ? handler(body, query) : handler)
     if (answer === 'network-error') throw new TypeError('Failed to fetch')
@@ -57,6 +60,34 @@ export const TRANSCRIBE = 'POST /transcribe'
 export const TRANSCRIBE_STATUS = 'GET /transcribe/status'
 
 const NOW = '2026-10-27T10:00:00Z'
+
+export const TEST_USER: User = {
+  id: 1,
+  name: 'Karim',
+  phone: '+8801700000000',
+  email: null,
+  shop: { id: 1, name: 'Demo Dokan', owner_name: 'Karim', created_at: NOW },
+  ai_enabled: true,
+  consent_version: '2026-10',
+  consent_at: NOW,
+  created_at: NOW,
+}
+
+/** Logged in as TEST_USER until 2099 (tests/setup.ts starts every test with it). */
+export const TEST_SESSION: Session = { token: 'test-token', expiresAt: '2099-01-01T00:00:00Z', user: TEST_USER }
+
+export function authResult(user: Partial<User> = {}, expiresAt = '2099-01-01T00:00:00Z'): AuthResult {
+  return { access_token: 'new-token', token_type: 'bearer', expires_at: expiresAt, user: { ...TEST_USER, ...user } }
+}
+
+export const LOGIN = 'POST /auth/login'
+export const REGISTER = 'POST /auth/register'
+export const LOGOUT = 'POST /auth/logout'
+export const ME = 'PATCH /auth/me'
+export const DELETE_ME = 'DELETE /auth/me'
+export const EXPORT = 'GET /shops/1/export.csv'
+export const CREATE_CUSTOMER = 'POST /shops/1/customers'
+export const customerKey = (id: number) => `PATCH /shops/1/customers/${id}`
 
 export function customer(id: number, name: string, balance: number, note: string | null = null): Customer {
   return { id, shop_id: 1, name, phone: null, note, created_at: NOW, balance }

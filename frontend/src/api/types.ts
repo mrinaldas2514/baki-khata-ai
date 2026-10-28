@@ -2,6 +2,52 @@
 
 export type TransactionType = 'credit' | 'payment'
 
+export interface Shop {
+  id: number
+  name: string
+  owner_name: string
+  created_at: string
+}
+
+/** The logged-in shopkeeper. */
+export interface User {
+  id: number
+  name: string
+  /** Normalized: +8801711000001 / +919876543210. */
+  phone: string | null
+  email: string | null
+  shop: Shop
+  /** False: "AI bondho" — nothing is sent to the AI provider. */
+  ai_enabled: boolean
+  consent_version: string
+  consent_at: string
+  created_at: string
+}
+
+export interface AuthResult {
+  access_token: string
+  token_type: 'bearer'
+  expires_at: string
+  user: User
+}
+
+export interface RegisterInput {
+  name: string
+  shop_name: string
+  phone: string | null
+  email: string | null
+  password: string
+  consent: boolean
+  consent_version: string
+}
+
+/** Create or edit a customer. */
+export interface CustomerInput {
+  name: string
+  phone: string | null
+  note: string | null
+}
+
 export interface Customer {
   id: number
   shop_id: number
@@ -81,6 +127,8 @@ export interface TransactionInput {
   amount: number
   item: string | null
   raw_text?: string | null
+  /** When it happened (ISO). Left out: now (adding) or unchanged (editing). */
+  created_at?: string
 }
 
 export interface CustomerBalanceSummary {

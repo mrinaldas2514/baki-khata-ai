@@ -123,7 +123,8 @@ function micErrorCode(error: unknown): VoiceErrorCode {
 
 export function serverErrorCode(error: unknown): VoiceErrorCode {
   if (!(error instanceof ApiError) || error.kind === 'network') return 'network'
-  if (error.status === 503) return 'server-off'
+  // 403: the shopkeeper turned AI off, so voice isn't sent to the server either.
+  if (error.status === 503 || error.status === 403) return 'server-off'
   if (error.status === 413) return 'too-long'
   return 'failed'
 }

@@ -9,6 +9,7 @@ import { SavedMessage } from '../components/SavedMessage'
 import { SmartEntry } from '../components/SmartEntry'
 import { VoiceSettings } from '../components/VoiceSettings'
 import { VoiceStatus } from '../components/VoiceStatus'
+import { Alert } from '../components/ui'
 import { LOW_CONFIDENCE } from '../config'
 import { type CustomerChoice, type Draft, EMPTY_FORM, type FormValues, toConfirmRequest } from '../entry'
 import { parseErrorMessage, saveErrorMessage } from '../errors'
@@ -59,7 +60,7 @@ function formFromPreview(preview: ParsePreview, choice: CustomerChoice | null, n
  * Stays mounted while other tabs are open (only hidden), so a half-written sentence survives a
  * look at the customer list. `active` turns true again when the shopkeeper comes back.
  */
-export function HisabScreen({ active }: { active: boolean }) {
+export function HisabScreen({ active, aiEnabled = true }: { active: boolean; aiEnabled?: boolean }) {
   const [text, setText] = useState('')
   const [step, setStep] = useState<Step>({ kind: 'idle' })
   const [saving, setSaving] = useState(false)
@@ -161,6 +162,8 @@ export function HisabScreen({ active }: { active: boolean }) {
   return (
     <div ref={topRef} className="flex scroll-mt-4 flex-col gap-6">
       {step.kind === 'saved' && <SavedMessage result={step.result} onClose={() => goTo({ kind: 'idle' })} />}
+
+      {showEntry && !aiEnabled && <Alert tone="info">{strings.settings.aiOffBanner}</Alert>}
 
       {showEntry && (
         <SmartEntry

@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { api } from '../api/client'
-import type { CustomerListItem } from '../api/types'
+import { ApiError, api } from '../api/client'
+import type { CustomerInput, CustomerListItem } from '../api/types'
+import { CustomerForm } from '../components/CustomerForm'
+import { Sheet } from '../components/Dialog'
 import { Button, inputClass } from '../components/ui'
+import { saveErrorMessage } from '../errors'
 import { type CustomerSort, daysOwed, matchesSearch, sortCustomers } from '../customers'
 import { describeBalance, formatTaka } from '../format'
 import { href } from '../route'
@@ -21,6 +24,9 @@ interface Props {
 export function CustomersScreen({ search, onSearch, sort, onSort }: Props) {
   const [customers, setCustomers] = useState<CustomerListItem[] | null>(null)
   const [failed, setFailed] = useState(false)
+  const [adding, setAdding] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<unknown>(null)
 
   const load = useCallback(() => api.customers().then(setCustomers, () => setFailed(true)), [])
 
@@ -38,6 +44,18 @@ export function CustomersScreen({ search, onSearch, sort, onSort }: Props) {
         : [],
     [customers, search, sort],
   )
+  async function addCustomer(values: CustomerInput) {
+    setSaving(true)
+    setSaveError(null)
+    try {
+      const created = await api.createCustomer(values)
+      window.location.hash = href.khata(created.id)
+    } catch (error) {
+      setSaveError(error)
+      setSaving(false)
+    }
+  }
+
   const owing = customers?.filter((c) => c.balance > 0) ?? []
   const totalOwed = owing.reduce((sum, c) => sum + c.balance, 0)
 
@@ -55,6 +73,27 @@ export function CustomersScreen({ search, onSearch, sort, onSort }: Props) {
           </p>
         )}
       </div>
+
+      <Button
+        variant="secondary"
+        onClick={() => {
+          setSaveError(null)
+          setAdding(true)
+        }}
+      >
+        {strings.customerForm.addButton}
+      </Button>
+      {adding && (
+        <Sheet title={strings.customerForm.addTitle} onClose={() => !saving && setAdding(false)}>
+          <CustomerForm
+            saving={saving}
+            error={saveError ? saveErrorMessage(saveError) : null}
+            phoneRejected={saveError instanceof ApiError && saveError.fieldErrors.some((e) => e.field === 'phone')}
+            onSave={addCustomer}
+            onCancel={() => setAdding(false)}
+          />
+        </Sheet>
+      )}
 
       <div className="flex flex-col gap-3">
         <label htmlFor="customer-search" className="sr-only">
