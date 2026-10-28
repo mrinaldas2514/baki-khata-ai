@@ -5,19 +5,26 @@ credit (*baki*) by typing or speaking Banglish instead of writing in a paper led
 
 This repository contains:
 
-- a **backend**: a REST API built with FastAPI, SQLAlchemy and Pydantic, plus an **AI parsing
-  layer** that turns one free-form sentence ("rahim bhai 2 kg chal 120 taka baki") into a
-  transaction preview;
-- a **frontend**: a mobile-first React app with three tabs: **Hisab** (type or speak a sentence,
-  check the confirmation card, save), **Customer** (everyone's balance, and each customer's
-  khata) and **Dashboard** (what's owed, today's money, old baki).
+- a **backend**: a REST API built with FastAPI, SQLAlchemy (with Alembic migrations) and
+  Pydantic, plus an **AI parsing layer** that turns one free-form sentence ("rahim bhai 2 kg chal
+  120 taka baki") into a transaction preview;
+- a **frontend**: a mobile-first React app. Each shopkeeper has their own **account** (mobile
+  number or email and password) and only ever sees their own shop. Three tabs: **Hisab** (type or
+  speak a sentence, check the confirmation card, save), **Customer** (everyone's balance, and each
+  customer's khata) and **Dashboard** (what's owed, today's money, old baki), plus **Settings**
+  (turn the AI off, download everything as CSV, log out, delete the account).
+
+**Demo login** (after `python -m app.seed`, see [Running it locally](#running-it-locally-macos-step-by-step)):
+mobile **`01700000000`**, password **`demo1234`**.
 
 ## How it works
 
 The app is made for a busy shopkeeper on a cheap Android phone (it's checked at 360 px wide).
-Three big tabs sit at the bottom, in thumb reach: **Hisab**, **Customer** and **Dashboard**
-(see [The screens](#the-screens)). The phone's back button works between them, because each
-screen has its own address (`#/customers`, `#/customers/7`, `#/dashboard`).
+The shopkeeper logs in once (it stays logged in for a week, see
+[Accounts](#accounts-and-logging-in)). Three big tabs sit at the bottom, in thumb reach:
+**Hisab**, **Customer** and **Dashboard**, and **Settings** is at the top right (see
+[The screens](#the-screens)). The phone's back button works between them, because each screen
+has its own address (`#/customers`, `#/customers/7`, `#/dashboard`, `#/settings`).
 
 ### Hisab: writing an entry
 
@@ -40,6 +47,22 @@ screen has its own address (`#/customers`, `#/customers/7`, `#/dashboard`).
 4. **Save.** *Save korun* calls `POST /shops/{id}/parse/confirm`. A success message shows the
    customer's new balance and the entry appears at the top of the list. *Bad din* (cancel)
    goes back to the box with the sentence still there.
+5. **Undo (10 seconds).** Under the success message, **↶ Bhul hoyeche? Undo (10)** counts down.
+   Tapping it deletes what was just saved (and the customer, if the entry had just created
+   them), and puts the sentence back in the box to fix and try again. After 10 seconds the button
+   goes; an entry can still be fixed or deleted from the customer's khata.
+
+**Several customers in one sentence.** `rahim 200 baki, karim 500 dilo, salma 100 baki` becomes
+**three cards**, one per customer, each with its amount, Baki/Joma, item and customer (pick
+between look-alikes on the card). Each card has *Thik kore din* (fix it in place) and *Bad din*
+(drop it). **Sob save korun (3 ta)** saves them all together (`POST /parse/confirm-many`: all of
+them or, if anything fails, none), then the same Undo removes them all. A sentence like
+`salma apa pach sho taka baki, dal r tel` stays one entry: "dal r tel" is goods, not a customer.
+
+**AI off.** With *AI bondho rakhun* switched on in Settings, the sentence is read on the server
+by the simple rule-based parser (see [Demo mode](#demo-mode-without-an-api-key)) and nothing is
+sent to the AI provider. A note above the box says so; when the parser can't read a sentence the
+manual form opens as usual.
 
 If something goes wrong (no internet, the AI is down or gives a bad answer, the sentence has no
 name or amount) the app says so in plain words and opens the same form empty, so the shopkeeper
@@ -50,6 +73,34 @@ saved as `raw_text`.
 Tapping an entry in the list below the box opens that customer's khata.
 
 ## The screens
+
+### Login and register
+
+- **Login korun**: *Mobile number ba email* and *Password*, big boxes, and a **Dekhun / Lukan**
+  button to show the password while typing it. The number can be typed any way
+  (`01711-000001`, `+880 1711 000001`...). A wrong number or password gets one message for both
+  (*Mobile number/email ba password thik nei*), so nobody can find out which numbers have an
+  account.
+- **Notun account khulun**: your name, the shop's name, a mobile number (Bangladesh or India; or
+  an email instead), and a password of at least 8 characters. Below them is a short privacy note
+  in Banglish (*Apnar hisab, apnar odhikar*, see [Privacy](#privacy)) with a box to tick:
+  without the tick the account isn't made. Registering creates the shop and logs straight in.
+- The app stays logged in across reloads and restarts of the phone's browser. When the login
+  ends (after 7 days, after *Logout*, or when the server says the login is no longer valid) the
+  login screen comes back with a message such as *Login-er shomoy shesh hoye geche. Abar login
+  korun.*
+
+### Settings
+
+Opened with **Settings** at the top right.
+
+- **Apnar account**: name, shop and mobile number.
+- **AI bondho rakhun**: a switch. Off (default): sentences go to the AI for the best reading.
+  On: nothing is sent to the AI provider (see [Privacy](#privacy)).
+- **Data export (CSV)**: *Download korun* saves the whole khata as one file that opens in Excel.
+- **Logout**.
+- **Account muchhe din**: deletes the account, the shop and every customer and entry, after a
+  confirmation that needs the password (*Na, rakhun* is the safe choice).
 
 ### Customer list
 
@@ -64,19 +115,28 @@ Tapping an entry in the list below the box opens that customer's khata.
   matching, in `frontend/src/customers.ts`). Search and sort are kept when you open a khata and
   come back.
 - Tap a customer to open their khata.
+- **+ Notun customer** adds someone before their first entry: name, mobile number (optional) and
+  area/note. Then their (empty) khata opens.
 
 ### Customer khata
 
 - At the top: the name, area/note, phone (tap to call) and the current balance in big type.
+- **✎ Tottho bodlan** fixes the name, mobile number or area/note. Mobile numbers must be from
+  Bangladesh (`01XXXXXXXXX`, `+880...`) or India (`+91...`); anything else gets *Bangladesh
+  (01XXXXXXXXX ba +880) ba India (+91) mobile number likhun* before it's sent. They're saved in
+  one form (`+8801711000001`) and shown the way people read them (`01711-000001`).
 - **Baki likhun** / **Joma likhun** open a small form for this customer with the type already
   picked: amount, item, save.
 - **Reminder pathan** (only when the customer owes something): see [Reminders](#reminders).
 - **The full history**, newest first. Each entry shows the date, item, the original sentence the
   shopkeeper typed or spoke, the amount (Baki/Joma) and the balance right after it
   (*Tarpor: Baki ৳800*). It loads 20 at a time; **Aro dekhun** loads older ones.
-- **Tap an entry** to fix its amount, type or item, or to delete it (*Muche felun*). Deleting
-  always asks first (*Ei hisab muche felben?*, with *Na, rakhun* as the safe default). After any
-  change the balance and every running balance on screen are reloaded from the backend.
+- **Tap an entry** to fix its amount, type, item or **date** (*Kobe?*), or to delete it (*Muche
+  felun*). The date can't be in the future; moving an entry to another day keeps its time of day.
+  Deleting always asks first (*Ei hisab muche felben?*, with *Na, rakhun* as the safe default).
+  After any change the balance and every running balance on screen are reloaded from the backend,
+  so moving an old payment to an earlier date changes the running balances after it.
+- *Baki likhun* / *Joma likhun* have the same date box, for an entry from yesterday.
 
 ### Dashboard
 
@@ -103,16 +163,91 @@ Karim, Demo Dokan
 
 The message can be changed in the box. **WhatsApp-e khulun** opens WhatsApp
 (`https://wa.me/<number>?text=...`) with the message typed in; the shopkeeper checks it and
-presses send. **The app never sends anything by itself.** If the customer has no phone number
-(or it can't be used), the app says so and *Message copy korun* copies it to paste anywhere.
+presses send. **The app never sends anything by itself.** If the customer has no phone number,
+the reminder asks for it right there (*Phone number save korun*): it's checked, saved to the
+customer and then *WhatsApp-e khulun* appears. *Message copy korun* always works too.
 
 - The message comes from a fixed template, so it works without AI. When Groq is set up the AI
   may reword it to sound more natural, but its version is only used if it keeps the customer's
   name and exact amount and adds no numbers of its own; otherwise the template is used. With the
   rule-based demo parser there is no rewording.
-- Phone numbers are turned into WhatsApp's international form with `PHONE_COUNTRY_CODE`
-  (`880` Bangladesh by default, `91` for India): `01711-000001` → `8801711000001`. Numbers saved
-  with `+` or `00` are used as they are.
+- Phone numbers are saved with their country code (`+8801711000001`), so the WhatsApp number is
+  just its digits. Numbers saved before that (without a country code) get `PHONE_COUNTRY_CODE`
+  (`880` Bangladesh by default, `91` for India): `01711-000001` → `8801711000001`.
+
+## Accounts and logging in
+
+- **One shopkeeper, one shop.** Registering makes a user and their shop together; the user's
+  name signs the WhatsApp reminders. Logging in works with the mobile number in any format
+  (`01711-000001`, `+8801711000001`...) or the email.
+- **Passwords** are stored only as **argon2id** hashes (`argon2-cffi`, RFC 9106's settings).
+  A wrong login and an unknown account get the same answer and take the same time.
+- **Login tokens** are JWTs (HS256) signed with `JWT_SECRET`, holding the user and shop ids and
+  an expiry (**7 days** by default, `JWT_EXPIRE_MINUTES`): long enough that a shopkeeper isn't
+  typing a password every morning, short enough that a lost phone's login ends on its own.
+  *Logout* ends it at once: the token's id goes on a deny list (`revoked_tokens`) until it would
+  have expired anyway. Deleting the account ends every login.
+- **Every shop endpoint checks ownership**: `/shops/{id}/...` must be the logged-in user's shop,
+  and each customer and transaction is looked up inside that shop. Anything else is `404`, the
+  same as for something that doesn't exist, so nothing leaks (not even whether a shop id exists).
+  `tests/test_ownership.py` tries every endpoint with another shopkeeper's ids.
+- **In the app** the token and user are kept in `localStorage`, so a reload stays logged in. A
+  `401` from the backend, or reaching the token's expiry time while the app is open, goes back to
+  the login screen. *Trade-off:* `localStorage` can be read by script on the page, so an XSS bug
+  would expose the token; an `HttpOnly` cookie would avoid that but needs CSRF protection and
+  cookie settings that work across the two development ports. React escapes everything shown and
+  the app has no `dangerouslySetInnerHTML`; a cookie is listed in [Next steps](#next-steps-not-built-yet).
+
+## Privacy
+
+Bangladesh's 2025 data protection rules ask for clear consent that can be withdrawn. The app:
+
+- **Asks before anything is stored.** The registration screen shows a short Banglish note and
+  can't continue without the tick:
+  - entries (the typed or spoken sentence) are sent to an AI service (Groq) to understand them;
+  - voice is sent to the server (and Groq) for transcription only when the browser can't do it;
+  - the data is not sold, and not used for loans or credit;
+  - AI can be turned off, everything downloaded, or the account deleted, any time in Settings.
+
+  The backend refuses a registration without `consent: true` and the note's current version
+  (`CONSENT_VERSION` in `backend/app/privacy.py`, `frontend/src/config.ts`), and stores the version
+  and time with the user (`consent_version`, `consent_at`). Change the version when the note's
+  meaning changes.
+- **AI bondho rakhun** (Settings) withdraws the AI part: `/parse` uses the rule-based parser on
+  the server, reminders use the fixed template, `/transcribe` refuses (`403`) and
+  `/transcribe/status` says unavailable, so nothing reaches the AI provider. The browser's own
+  speech recognition still works (Chrome sends that audio to Google, which the browser decides).
+  Tests check that the fake LLM and speech-to-text are never called with AI off.
+- **Data export (CSV)**: `GET /shops/{id}/export.csv`, one row per transaction (oldest first per
+  customer) and one per customer without any: `customer_id, customer_name, phone, area_note,
+  date` (shop's local time), `type` (Baki/Joma), `amount, item, original_sentence,
+  balance_after`. UTF-8 **with a BOM**, so Excel shows Bangla correctly; cells starting with
+  `= + - @` get a leading `'` so Excel won't run them as formulas.
+- **Account muchhe din** deletes the user, the shop, every customer and every transaction (the
+  database cascades from the shop), after the password is typed again.
+- **Logs carry ids, not people.** No sentence, name, phone number or amount is logged at INFO or
+  above (e.g. *Saved 3 entries in shop 4*, *Registered user 7 with shop 7*); a model's broken
+  answer is only logged at DEBUG. uvicorn's access log has its query strings cut off
+  (`?search=rahim`). `tests/test_privacy.py` runs a whole parse/save/reminder flow and checks
+  the logs.
+
+## Rate limits
+
+Too many requests in a short time get `429` with a `Retry-After` header and the Banglish
+*Onek bar chesta hoyeche. 42 second por abar chesta korun.*, which the app shows as it is (and
+voice says *Onek bar bola hoyeche...*).
+
+| What | Default limit | Counted per |
+|---|---|---|
+| `POST /auth/login` | 10 a minute | client IP, and separately per account typed |
+| `POST /auth/register` | 10 an hour | client IP |
+| `POST /shops/{id}/parse` | 30 a minute | shop (each one may cost an AI call) |
+| `POST /transcribe` | 15 a minute | shop |
+
+The limiter (`app/rate_limit.py`) keeps counts in the server's memory: they're per process and
+reset when it restarts. Behind a proxy every request seems to come from the proxy's IP, and with
+several processes each counts on its own; in production put limits in the proxy too (e.g. nginx
+`limit_req`). Change them with the `RATE_LIMIT_*` settings.
 
 ## Running it locally (macOS, step by step)
 
@@ -152,13 +287,64 @@ cd backend
 python3 -m venv .venv                 # a private Python environment for this project (once)
 source .venv/bin/activate             # run this every time you open a new terminal
 pip install -r requirements-dev.txt   # once, and again when requirements change
-cp .env.example .env                  # once; edit .env to add a GROQ_API_KEY if you have one
-python -m app.seed                    # once: creates the demo shop, prints its id (1)
+cp .env.example .env                  # once (see below for JWT_SECRET and GROQ_API_KEY)
+alembic upgrade head                  # creates the database; run again after every git pull
+python -m app.seed                    # once: the demo shop, and prints its login
 uvicorn app.main:app --reload
+```
+
+`python -m app.seed` prints:
+
+```
+Created the demo shop 'Demo Dokan' with its customers and hisab.
+Log in to the app with:
+  Phone:    01700000000
+  Password: demo1234
 ```
 
 Leave this window open. The API runs at http://localhost:8000 (API docs at
 http://localhost:8000/docs). Stop it with Ctrl+C.
+
+**The login secret (`JWT_SECRET`).** Logins are signed with a secret from `backend/.env`. Make
+one (once) and paste it after `JWT_SECRET=` in `backend/.env`:
+
+```bash
+python3 -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+Without it the backend still runs in development, with a random secret it makes at each start:
+everyone is logged out whenever the backend restarts (and with `--reload`, that's every time you
+save a Python file). On a real server (`ENVIRONMENT=production`) it refuses to start without one.
+
+#### The database, step by step (Alembic)
+
+The tables are made by **migrations** (the files in `backend/migrations/versions/`), not by the
+app. The backend refuses to start until the database is up to date and says so:
+
+```
+The database has no tables yet; this code needs migration 0002. Run `alembic upgrade head` in
+backend/ (see README), then start the server again.
+```
+
+All commands run in `backend/` with the virtual environment on (`source .venv/bin/activate`):
+
+| To... | Run |
+|---|---|
+| Create the database, or bring it up to date after `git pull` | `alembic upgrade head` |
+| See which migration the database is at | `alembic current` |
+| List every migration | `alembic history` |
+| Start completely over with the demo data | stop the backend, `rm baki_khata.db`, `alembic upgrade head`, `python -m app.seed` |
+| Go back one migration (rarely needed) | `alembic downgrade -1` |
+
+The database is the one in `DATABASE_URL` (`backend/.env`); `sqlite:///./baki_khata.db` means the
+file `backend/baki_khata.db`.
+
+**Had the app running before accounts existed?** That database was made without migrations, so
+`alembic upgrade head` fails with *table shops already exists*. If it only has demo data, delete
+it and start over (row "Start completely over" above). To keep its data, run
+`alembic stamp 0001` once (it marks the old tables as migration 0001), then
+`alembic upgrade head`. Old shops have no login; add one by registering a new account in the app
+(that makes a new, empty shop) or ask a developer to link the old shop to a user.
 
 ### 3. Start the frontend (terminal window 2)
 
@@ -167,12 +353,13 @@ Open a new Terminal window (⌘ N), go to the project folder again, then:
 ```bash
 cd frontend
 npm install            # once, and again when package.json changes
-cp .env.example .env   # once; VITE_SHOP_ID must match the id the seed script printed
+cp .env.example .env   # once
 npm run dev
 ```
 
-Open http://localhost:5173 in your browser. To see it the way a phone does, open Chrome's
-developer tools (⌥ ⌘ I) and switch on the device toolbar (⇧ ⌘ M).
+Open http://localhost:5173 in your browser and log in with the demo login (**01700000000** /
+**demo1234**), or tap *Notun account khulun* to make your own shop. To see it the way a phone
+does, open Chrome's developer tools (⌥ ⌘ I) and switch on the device toolbar (⇧ ⌘ M).
 
 Try:
 
@@ -181,10 +368,14 @@ Try:
 - `tanvir 90 taka baki`: new customer
 - `মিজান কাকা ৩৫০ টাকার চিনি আর আটা নিল`: Bangla script
 - `rina 2 ta saban`: no amount, so the manual form opens
+- `rahim 200 baki, jasim 500 dilo, tanvir 100 taka baki`: three cards; save all, then *Undo*
 - the **Customer** tab: sort, search `রহিম` or `ayesha`, open Rahim (Bazar road) and send a reminder
 - the **Dashboard** tab: Rahim and Jasim have baki older than 30 days
+- **Settings**: switch *AI bondho rakhun* on and parse again; download the CSV and open it in
+  Excel (Bangla names show correctly); log out and back in
 
-**Start over with fresh demo data:** stop the backend, run `python -m app.seed --reset`, start it again.
+**Start over with fresh demo data:** stop the backend, run `python -m app.seed --reset` (it
+deletes the demo shop and everything in it, then makes it again), start it again.
 
 **Try it on your phone:** connect the phone to the same Wi-Fi as the Mac and find the Mac's IP
 address (System Settings → Wi-Fi → Details, e.g. `192.168.0.5`). Then:
@@ -207,7 +398,12 @@ and point `VITE_API_URL` at a tunnel to port 8000).
 | You see | Fix |
 |---|---|
 | "Internet ba server-e somossa" | The backend isn't running, or `VITE_API_URL` in `frontend/.env` is wrong. Restart `npm run dev` after editing `.env`. |
-| "Dokan pawa jayni" | No demo shop. Run `python -m app.seed` in `backend/` and check `VITE_SHOP_ID`. |
+| The backend stops at start with "The database has no tables yet" (or "is at migration ...") | Run `alembic upgrade head` in `backend/`, then start it again. |
+| `alembic upgrade head` says *table shops already exists* | The database is from before migrations: see *Had the app running before accounts existed?* above. |
+| "Mobile number/email ba password thik nei" with the demo login | The demo shop isn't there: run `python -m app.seed` in `backend/`. |
+| Logged out every time the backend restarts | Set `JWT_SECRET` in `backend/.env` (see *The login secret* above). |
+| "Onek bar chesta hoyeche. ... por abar chesta korun." | Too many tries in a short time (see [Rate limits](#rate-limits)). Wait, or restart the backend while developing. |
+| "Dokan pawa jayni" | The saved login is for a shop that no longer exists (e.g. after `--reset`). Log out (Settings) and log in again. |
 | A CORS error in the browser console | Add the address in the browser's address bar to `CORS_ORIGINS` in `backend/.env` (no trailing `/`) and restart the backend. |
 | `command not found: uvicorn` | Run `source .venv/bin/activate` in `backend/` first. |
 | No mic button | The browser has no speech recognition (Firefox) and the backend has no `GROQ_API_KEY`. Use Chrome or Edge, or add a key. |
@@ -222,17 +418,24 @@ backend/
 ├── app/
 │   ├── main.py          # FastAPI app factory, routers, error handlers
 │   ├── config.py        # Settings from environment variables / .env
-│   ├── database.py      # Engine + per-request session
+│   ├── database.py      # Engine, per-request session, "is the database migrated?" check
+│   ├── auth.py          # logged-in user dependency, "this shop is yours" check (404 if not)
+│   ├── security.py      # argon2id password hashes, JWT login tokens
+│   ├── rate_limit.py    # in-memory rate limiter (login, register, parse, transcribe)
+│   ├── privacy.py       # the privacy note's version, and where its promises are kept
+│   ├── logging_privacy.py # keeps query strings (names) out of the access log
 │   ├── groq_models.py   # startup check: logs a clear error if Groq rejects a configured model
 │   ├── time_utils.py    # UTC / shop-local-time helpers
 │   ├── llm/             # LLM interface, Groq client, rule-based demo parser
 │   ├── stt/             # speech-to-text interface and the Groq Whisper client
-│   ├── models/          # SQLAlchemy tables: Shop, Customer, Transaction
+│   ├── models/          # SQLAlchemy tables: Shop, User, RevokedToken, Customer, Transaction
 │   ├── schemas/         # Pydantic request/response models and validation
 │   ├── routers/         # HTTP endpoints (thin, just call services)
-│   └── services/        # Business logic (balance, customers, transactions, dashboard,
+│   └── services/        # Business logic (auth, balance, customers, transactions, dashboard,
 │                        #   reminders, parsing, parse_prompt, number_words, name_matching,
-│                        #   transcription)
+│                        #   transcription, phones, export)
+├── migrations/          # Alembic: env.py and versions/ (0001 initial schema, 0002 accounts)
+├── alembic.ini
 ├── tests/               # pytest suite (the LLM and speech-to-text are always faked)
 │   └── fixtures/eval_sentences.json   # example sentences + expected output
 ├── app/seed.py          # demo shop: python -m app.seed
@@ -242,17 +445,21 @@ backend/
 └── .env.example
 frontend/                # React + Vite + TypeScript + Tailwind
 ├── src/
-│   ├── App.tsx          # the shell: title bar, current screen, bottom tabs
+│   ├── App.tsx          # the shell: login while logged out; title bar, screen, bottom tabs
+│   ├── session.ts       # who is logged in (token + user), kept in localStorage
 │   ├── route.ts         # which screen is open, kept in the URL hash (#/customers/7)
-│   ├── screens/         # HisabScreen (entry → confirm/edit → saved), CustomersScreen,
-│   │                    #   KhataScreen, DashboardScreen
+│   ├── screens/         # HisabScreen (entry → confirm/edit/several → saved + undo),
+│   │                    #   CustomersScreen, KhataScreen, DashboardScreen, SettingsScreen,
+│   │                    #   AuthScreens (login, register)
 │   ├── customers.ts     # customer list search (Bangla ↔ English) and sorting
 │   ├── reminder.ts      # wa.me link and copy-to-clipboard
 │   ├── strings.ts       # every UI text, in Banglish (add a Bangla/English set here later)
-│   ├── config.ts        # VITE_API_URL, VITE_SHOP_ID
+│   ├── phone.ts         # Bangladesh / India mobile numbers (same rules as the backend)
+│   ├── config.ts        # VITE_API_URL, the privacy note's version
 │   ├── api/             # fetch client and the backend's JSON types
-│   ├── components/      # SmartEntry, MicButton, ConfirmationCard, EntryForm, BottomNav,
-│   │                    #   TransactionForm, ReminderSheet, WeekChart, Dialog...
+│   ├── components/      # SmartEntry, MicButton, ConfirmationCard, MultiConfirm, EntryForm,
+│   │                    #   BottomNav, TransactionForm, CustomerForm, ReminderSheet,
+│   │                    #   SavedMessage (with Undo), WeekChart, Dialog...
 │   ├── voice/           # speech engines (browser / server), useVoiceInput, voice settings
 │   └── test/            # test setup, the fetch mock and the speech API mocks
 └── .env.example
@@ -261,12 +468,15 @@ frontend/                # React + Vite + TypeScript + Tailwind
 ## Data model
 
 ```
-shops 1 ──── * customers 1 ──── * transactions
-  └──────────────────────────────────┘ (transactions also carry shop_id)
+users 1 ──── 1 shops 1 ──── * customers 1 ──── * transactions
+                 └──────────────────────────────────┘ (transactions also carry shop_id)
+revoked_tokens (logged-out logins, until they would have expired)
 ```
 
 | Table | Columns |
 |---|---|
+| **users** | `id`, `shop_id` (unique: one shop each), `name`, `phone` (unique, optional), `email` (unique, optional; one of the two is required), `password_hash` (argon2id), `ai_enabled`, `consent_version`, `consent_at`, `created_at` |
+| **revoked_tokens** | `jti` (the token's id), `expires_at` |
 | **shops** | `id`, `name`, `owner_name`, `created_at` |
 | **customers** | `id`, `shop_id`, `name`, `phone` (optional), `note` (optional area/note), `created_at` |
 | **transactions** | `id`, `shop_id`, `customer_id`, `type` (`credit` \| `payment`), `amount`, `item` (optional), `raw_text` (optional), `created_at` |
@@ -274,6 +484,9 @@ shops 1 ──── * customers 1 ──── * transactions
 - **`type`**: `credit` means the customer took goods on baki. `payment` means the customer paid money.
 - **`amount`**: a whole number of taka, always greater than 0 (also enforced by a database
   CHECK constraint). The `type` says which direction the money moved, so amounts are never negative.
+- **`phone`** (customers and users): a Bangladesh or India mobile, stored as `+8801711000001` /
+  `+919876543210` whatever way it was typed (`app/services/phones.py`). Anything else is refused.
+- Deleting a shop deletes its user, customers and transactions with it (`ON DELETE CASCADE`).
 - **`note`**: tells apart two customers with the same name, e.g. "Rahim (Bazar road)" and
   "Rahim (Tea stall)". Within a shop, two customers may only share a name if their notes differ.
 - **`raw_text`**: the original sentence the shopkeeper typed or spoke, e.g.
@@ -320,33 +533,49 @@ If a request sends a date without a timezone, it's read as the shop's local time
 
 Interactive docs are available at `http://localhost:8000/docs` once the server is running.
 
+Everything except `/health`, `/auth/register` and `/auth/login` needs the login token from
+`/auth/login` or `/auth/register` in an `Authorization: Bearer <access_token>` header. Every
+`/shops/{shop_id}/...` path must be the logged-in user's own shop: any other shop id (and any
+customer or transaction of another shop) answers **404**, exactly like one that doesn't exist.
+
 | Method | Path | Description |
 |---|---|---|
-| GET | `/health` | Health check |
-| POST | `/shops` | Create a shop |
-| GET | `/shops/{shop_id}` | Get a shop |
+| GET | `/health` | Health check (no login) |
+| POST | `/auth/register` | Create a shop and its shopkeeper (`name`, `shop_name`, `phone` and/or `email`, `password` ≥ 8 characters, `consent: true`, `consent_version`); logs in. `409` if the phone/email has an account |
+| POST | `/auth/login` | `{"login": "<phone in any format, or email>", "password": "..."}` → `access_token`, `expires_at`, `user` (with its `shop`). `401` for a wrong login or password |
+| POST | `/auth/logout` | This token stops working now (204) |
+| GET | `/auth/me` | The logged-in user and shop, `ai_enabled`, consent version and time |
+| PATCH | `/auth/me` | Settings: `{"ai_enabled": false}` turns the AI off |
+| DELETE | `/auth/me` | Delete the account, shop, customers and transactions. Body `{"password": "..."}`; `403` if wrong |
+| GET | `/shops/{shop_id}` | The shop |
+| GET | `/shops/{shop_id}/export.csv` | The whole khata as CSV (see [Privacy](#privacy)) |
 | POST | `/shops/{shop_id}/customers` | Create a customer |
 | GET | `/shops/{shop_id}/customers?search=` | List customers with balances and `owed_since` (date of the oldest unpaid credit, or null); optional search by name/note/phone |
 | GET | `/shops/{shop_id}/customers/{customer_id}` | Get one customer with current balance |
+| PATCH | `/shops/{shop_id}/customers/{customer_id}` | Change `name`, `phone`, `note` (only the fields sent; `null` clears phone/note). `409` if it would clash with another customer |
+| DELETE | `/shops/{shop_id}/customers/{customer_id}` | Only for a customer without transactions (`409` otherwise); used by Undo |
 | POST | `/shops/{shop_id}/customers/{customer_id}/transactions` | Create a transaction (response includes the new balance) |
 | GET | `/shops/{shop_id}/customers/{customer_id}/transactions?order=newest&limit=20&offset=0` | Customer ledger with running balance. `order`: `oldest` (default) or `newest`; `limit` (1–200, default all) and `offset` page through it; the answer has `total` and `has_more` |
 | POST | `/shops/{shop_id}/customers/{customer_id}/reminder` | A polite Banglish baki reminder (`message`, `polished`, `phone`, `whatsapp_number`). Body optional: `{"polish": false}` skips the AI. Sends and saves nothing; `409` if nothing is owed |
 | GET | `/shops/{shop_id}/transactions?limit=10` | The shop's latest transactions (all customers), newest first, with customer name and note |
 | GET | `/shops/{shop_id}/transactions/{transaction_id}` | Get one transaction |
-| PATCH | `/shops/{shop_id}/transactions/{transaction_id}` | Edit a transaction (only the fields you send) |
+| PATCH | `/shops/{shop_id}/transactions/{transaction_id}` | Edit a transaction (only the fields you send), including `created_at` (not in the future) |
 | DELETE | `/shops/{shop_id}/transactions/{transaction_id}` | Delete a transaction (204) |
 | GET | `/shops/{shop_id}/dashboard?overdue_days=30` | Total outstanding, today's collection and new baki, top 5, overdue customers, and `last_7_days` (`date`, `credit`, `payment` per local day, oldest first) |
-| POST | `/shops/{shop_id}/parse` | Turn one free-form sentence into a transaction **preview** (saves nothing) |
+| POST | `/shops/{shop_id}/parse` | Turn one free-form sentence into a transaction **preview** (saves nothing); `entries` has one item per customer |
 | POST | `/shops/{shop_id}/parse/confirm` | Save the confirmed preview, creating the customer if new |
-| POST | `/transcribe` | A short voice recording (multipart `file`, optional `language`) → `{"text": "..."}` (saves nothing) |
-| GET | `/transcribe/status` | Whether server-side transcription is set up, and its size/length limits |
-
-Every customer and transaction is looked up within its shop. Asking for another shop's data
-returns 404.
+| POST | `/shops/{shop_id}/parse/confirm-many` | Save several confirmed entries together (`{"entries": [...]}`, 1–10), all or none |
+| POST | `/transcribe` | A short voice recording (multipart `file`, optional `language`) → `{"text": "..."}` (saves nothing). `403` when the user turned AI off |
+| GET | `/transcribe/status` | Whether server-side transcription can be used (not without a key, not with AI off), and its size/length limits |
 
 **Errors**
 
+- `401`: not logged in, or the login expired / was logged out (`WWW-Authenticate: Bearer`).
+  The app then shows the login screen.
+- `403`: a wrong password when deleting the account; server voice while AI is off.
 - `404` / `409`: `{"detail": "Customer 7 not found in shop 1"}`
+- `429`: too many tries; `{"detail": "Onek bar chesta hoyeche. 42 second por abar chesta korun.",
+  "retry_after": 42}` and a `Retry-After` header (see [Rate limits](#rate-limits)).
 - `422`: errors are listed per field, so the app can show them next to the input:
 
 ```json
@@ -359,7 +588,12 @@ returns 404.
 **Example**
 
 ```bash
+# Log in and keep the token (the demo login from `python -m app.seed`)
+TOKEN=$(curl -s localhost:8000/auth/login -H 'content-type: application/json' \
+  -d '{"login": "01700000000", "password": "demo1234"}' | python3 -c "import sys, json; print(json.load(sys.stdin)['access_token'])")
+
 curl -X POST localhost:8000/shops/1/customers/1/transactions \
+  -H "Authorization: Bearer $TOKEN" \
   -H 'content-type: application/json' \
   -d '{"type": "credit", "amount": 250, "item": "2 kg chal", "raw_text": "Rahim 2 kg chal nilo 250 taka baki"}'
 ```
@@ -374,12 +608,33 @@ cd backend
 python -m venv .venv
 source .venv/bin/activate            # Windows: .venv\Scripts\activate
 pip install -r requirements-dev.txt
-cp .env.example .env                 # then edit if needed
+cp .env.example .env                 # then set JWT_SECRET (see below)
+alembic upgrade head                 # create / update the database
+python -m app.seed                   # optional: the demo login and shop
 uvicorn app.main:app --reload
 ```
 
-Open http://localhost:8000/docs. Tables are created automatically on startup in a SQLite file,
-`backend/baki_khata.db`. Run commands from inside `backend/` so the `.env` file is picked up.
+Open http://localhost:8000/docs (use **Authorize** with a token from `/auth/login` to try the
+shop endpoints). The database is a SQLite file, `backend/baki_khata.db`, created by
+`alembic upgrade head`; the app never creates tables itself and refuses to start on a database
+that isn't up to date. Run commands from inside `backend/` so the `.env` file is picked up.
+
+### Migrations (for developers)
+
+After changing `app/models/`, make a migration, read it, and apply it:
+
+```bash
+alembic revision --autogenerate -m "add customer birthday"   # writes migrations/versions/0003_...
+alembic upgrade head
+alembic check            # "No new upgrade operations detected" = models and migrations agree
+```
+
+Number new files by hand if you like (`--rev-id 0003`). Keep migrations free of app imports
+(plain `sa.DateTime()` for `UTCDateTime`), and give constraints names: SQLite runs `ALTER`s in
+"batch mode" (it copies the table), which needs them. `tests/test_migrations.py` checks that
+`upgrade head` builds exactly the models' schema, that downgrade works, and that the app won't
+start on an un-migrated database. The tests themselves use `create_all` on an in-memory database
+for speed.
 
 ### Configuration
 
@@ -391,7 +646,14 @@ Don't commit `.env`; it's already in `.gitignore`.
 | `DATABASE_URL` | `sqlite:///./baki_khata.db` | Database connection |
 | `APP_TIMEZONE` | `Asia/Dhaka` | Decides what "today" means (`Asia/Kolkata` for India) |
 | `APP_NAME` | `Baki Khata AI` | Shown in the API docs |
-| `ENVIRONMENT` | `development` | Free-form environment label |
+| `ENVIRONMENT` | `development` | `production` makes the backend refuse to start without `JWT_SECRET` |
+| `JWT_SECRET` | *(empty)* | Signs login tokens; a long random value (≥ 32 characters). Empty outside production: a random one per start |
+| `JWT_EXPIRE_MINUTES` | `10080` | How long a login lasts (7 days) |
+| `RATE_LIMIT_ENABLED` | `true` | Switch the rate limits off (e.g. load tests) |
+| `RATE_LIMIT_LOGIN_PER_MINUTE` | `10` | Login tries per minute, per IP and per account |
+| `RATE_LIMIT_REGISTER_PER_HOUR` | `10` | New accounts per hour, per IP |
+| `RATE_LIMIT_PARSE_PER_MINUTE` | `30` | `/parse` calls per minute, per shop |
+| `RATE_LIMIT_TRANSCRIBE_PER_MINUTE` | `15` | `/transcribe` calls per minute, per shop |
 | `SQL_ECHO` | `false` | Log SQL statements |
 | `CORS_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | Comma-separated browser origins allowed to call the API (the frontend) |
 | `LLM_PROVIDER` | `auto` | `auto`: Groq when `GROQ_API_KEY` is set, otherwise the rule-based demo parser. `groq`: always Groq (503 without a key). `fake`: always the demo parser |
@@ -401,7 +663,7 @@ Don't commit `.env`; it's already in `.gitignore`.
 | `GROQ_STT_MODEL` | `whisper-large-v3` | Groq speech-to-text model for `POST /transcribe` (`whisper-large-v3-turbo` is faster and cheaper, a little weaker on Bangla) |
 | `STT_MAX_AUDIO_BYTES` | `1000000` | Largest recording `POST /transcribe` accepts (413 above it) |
 | `STT_MAX_AUDIO_SECONDS` | `30` | Longest recording; the app stops recording at this point too |
-| `PHONE_COUNTRY_CODE` | `880` | Country calling code for WhatsApp reminder links (`91` for India) |
+| `PHONE_COUNTRY_CODE` | `880` | Country calling code for WhatsApp links of phones saved without one (from before numbers were normalized; `91` for India) |
 
 ### Switching to PostgreSQL
 
@@ -411,6 +673,8 @@ No code changes are needed:
 pip install "psycopg[binary]"
 # in .env
 DATABASE_URL=postgresql+psycopg://user:password@localhost:5432/baki_khata
+# then, as always
+alembic upgrade head
 ```
 
 ### Frontend configuration
@@ -420,7 +684,9 @@ From `frontend/.env` (see `frontend/.env.example`). Vite reads it when `npm run 
 | Variable | Default | Purpose |
 |---|---|---|
 | `VITE_API_URL` | `http://localhost:8000` | Where the backend runs |
-| `VITE_SHOP_ID` | `1` | The shop to use (there's no login yet) |
+
+There's no shop setting: the app uses the shop of whoever logs in. (`VITE_SHOP_ID` is gone; delete
+it from an old `frontend/.env`.)
 
 ### Demo mode without an API key
 
@@ -464,9 +730,12 @@ first parse so it's clear which one is running.
 4. Restart `uvicorn` and try it:
 
    ```bash
-   curl -X POST localhost:8000/shops/1/parse -H 'content-type: application/json' \
-     -d '{"text": "salma apa pach sho taka baki, dal r tel"}'
+   curl -X POST localhost:8000/shops/1/parse -H "Authorization: Bearer $TOKEN" \
+     -H 'content-type: application/json' -d '{"text": "salma apa pach sho taka baki, dal r tel"}'
    ```
+
+   (`$TOKEN` from `/auth/login`, see the [API example](#api).) With *AI bondho rakhun* on, the
+   rule-based parser answers instead and Groq is never called.
 
 ## Voice input
 
@@ -512,6 +781,9 @@ The app uses the browser engine when the browser has one, and the server when it
 *Server diye shunun* is on). With no key, `POST /transcribe` returns **503**, `GET
 /transcribe/status` says `"available": false`, and the app hides the server option; on a browser
 without speech recognition (Firefox) the mic button is then hidden and the app works by typing.
+The same happens when the shopkeeper turned AI off in Settings: `/transcribe/status` says
+`"available": false` for them and `POST /transcribe` answers `403`, so their voice never reaches
+Groq. Both endpoints need the login token, and `/transcribe` is rate-limited per shop.
 
 **Browser support**
 
@@ -557,13 +829,17 @@ mix. The backend turns it into a **preview**; nothing is saved until the shopkee
    │ 1. number normalization   (app/services/number_words.py)    no AI
    ▼    "salma apa 500 taka baki, dal r tel"
    │ 2. LLM, JSON mode         (app/services/parse_prompt.py, app/llm/)
-   ▼    {"customer_name": "salma", "amount": 500, "type": "credit", "item": "dal, tel", "confidence": 0.95}
+   ▼    {"entries": [{"customer_name": "salma", "amount": 500, "type": "credit", "item": "dal, tel", "confidence": 0.95}]}
    │ 3. Pydantic validation, one retry on bad output   (app/services/parsing.py)
    │ 4. sanity check: is the amount really in the sentence?
    │ 5. customer name matching (app/services/name_matching.py)  no AI
    ▼
 preview  →  shopkeeper checks / edits  →  POST /parse/confirm  →  saved, with raw_text
+                                        (or /parse/confirm-many for several customers)
 ```
+
+With *AI bondho rakhun* on (Settings), step 2 is the rule-based parser on the server instead of
+the LLM; every other step is the same.
 
 ### 1. Number normalization (no AI)
 
@@ -589,8 +865,11 @@ and the converted one.
 
 The prompt lives in `app/services/parse_prompt.py`:
 
-- **Strict output contract**: exactly one JSON object with `customer_name`, `amount`
-  (integer taka), `type` (`credit` | `payment`), `item` (nullable) and `confidence` (0–1).
+- **Strict output contract**: exactly one JSON object, `{"entries": [...]}`, each entry with
+  `customer_name`, `amount` (integer taka), `type` (`credit` | `payment`), `item` (nullable) and
+  `confidence` (0–1). Usually one entry; one per customer when the sentence lists several, each
+  with their own amount ("rahim 200 baki, karim 500 dilo"), at most 10. Several goods for one
+  customer stay one entry. A bare single entry object (the old contract) is still accepted.
   Groq's JSON mode is on and `temperature` is 0, so the same sentence parses the same way.
 - **Explicit rules** for the hard parts: strip honorifics from the name but keep its script;
   the amount is money, never a quantity ("2 kg chal 120 taka" → 120); which words mean
@@ -654,6 +933,11 @@ tell two Rahims apart.
 }
 ```
 
+For a sentence about several customers, `entries` holds one `{parsed, match, warnings}` per
+customer, in the order written; the top-level `parsed`, `match` and `warnings` are always the
+first entry (so a client that only knows single entries keeps working). Each entry's amount is
+checked against the sentence and each name is matched on its own.
+
 **Confirm**: `POST /shops/{shop_id}/parse/confirm` with the (possibly edited) values and
 **either** an existing `customer_id` **or** a `new_customer`:
 
@@ -665,6 +949,12 @@ tell two Rahims apart.
 It returns `201` with the saved `transaction` (including `raw_text` and the new balance), the
 `customer`, and `customer_created`. A new customer and its transaction are saved in one
 commit: if the name clashes with an existing customer (409), nothing is saved.
+
+**Confirm several**: `POST /shops/{shop_id}/parse/confirm-many` with
+`{"entries": [<confirm body>, ...]}` (1–10) returns `{"results": [<confirm result>, ...]}` in the
+same order. One commit: if any entry fails (another shop's customer, a name clash), nothing is
+saved. Two entries for the same new customer ("tanvir 50 baki, tanvir 20 dilo") create them once.
+Each result's balance is the customer's balance after all of them.
 
 **Errors**: `422` the sentence has no name/amount, or invalid input; `502` the model gave an
 invalid answer twice; `503` `LLM_PROVIDER=groq` without a `GROQ_API_KEY`, or Groq is
@@ -700,6 +990,17 @@ npm run lint        # oxlint
 npm run format      # Prettier
 ```
 
+The backend tests cover (besides the parsing, balances, dashboard, reminders and voice from
+before): migrations (`test_migrations.py`: `upgrade head` equals the models, downgrade, the app
+refusing an un-migrated database), accounts (`test_auth.py`: register with consent, login by
+phone in any format or email, wrong logins, token expiry, forged tokens, logout, deleting the
+account), ownership (`test_ownership.py`: shopkeeper A against every one of B's endpoints and
+ids), privacy (`test_privacy.py`: AI off never calls the LLM or speech-to-text, the CSV with
+Bangla text and formula escaping, logs without names or amounts), phone numbers
+(`test_phones.py`), customer editing, date editing with running balances, several entries per
+sentence with a faked LLM (`test_multi_entry.py`), undo (`test_undo.py`) and rate limits
+(`test_rate_limit.py`).
+
 The frontend tests drive the real screens with the backend mocked (`src/test/mockApi.ts`
 replaces `fetch`): the confirmation card for a matched, fuzzy, ambiguous and new customer, edit
 mode, saving, and every error falling back to manual entry; the bottom tabs; the customer list's
@@ -709,7 +1010,13 @@ WhatsApp reminder (`src/Khata.test.tsx`); and the dashboard (`src/Dashboard.test
 (`src/VoiceInput.test.tsx`) replace the speech APIs (`src/test/mockSpeech.ts`: a fake
 `SpeechRecognition`, `MediaRecorder` and microphone) and cover the mic button's states, hold vs.
 tap vs. keyboard, the transcript going through the normal flow, auto-submit, saved settings,
-permission denied and the other errors, and the server fallback.
+permission denied and the other errors, and the server fallback. Every test starts logged in
+(`src/test/setup.ts`); `src/Auth.test.tsx` covers login, show/hide password, register with the
+privacy note, staying logged in across a reload, a 401 or the token's expiry going back to
+login, and logout. `src/Settings.test.tsx` covers the AI switch, the CSV download and deleting the
+account; `src/CustomerEdit.test.tsx` adding and editing customers, phone checks, the reminder's
+"add phone" and changing an entry's date; `src/MultiEntry.test.tsx` the cards for several
+customers; `src/Undo.test.tsx` the 10-second undo.
 
 The tests never call Groq and need no API key: the LLM and speech-to-text are replaced by fakes
 that return scripted answers (`FakeLLM` and `FakeSTT` in `tests/conftest.py`).
@@ -723,12 +1030,20 @@ TEST_DATABASE_URL=postgresql+psycopg://user:password@localhost:5432/baki_test py
 
 ## Next steps (not built yet)
 
-- Alembic migrations (tables are currently created with `create_all` on startup)
-- Authentication: one login per shop, and taking `shop_id` from the token instead of the URL
+- **Password reset** (by SMS code or email). Today a forgotten password means a new account.
+- **Change password / phone** in Settings, and see where you're logged in ("log out everywhere").
+- **Shared rate limits** (Redis, or the proxy) for more than one server process, and the real
+  client IP from `X-Forwarded-For` behind a trusted proxy.
+- **An `HttpOnly` cookie for the login** instead of `localStorage` (with CSRF protection), and
+  shorter tokens with a refresh token.
+- **Link shops from before accounts** to a user (a small admin script); they have no login now.
+- **Several people per shop** (owner and helper) with their own logins.
+- Record consent withdrawals and AI on/off changes with their time (today only the current
+  state is stored), and show the privacy note again in Settings.
+- Undo for entries saved on the khata screen (Undo is on the Hisab screen only).
 - Measure voice accuracy: a few recorded Banglish sentences run through both engines and
   `/parse`, to choose the default engine and Whisper model with numbers
 - A Bangla-script / English switch for the UI (all texts are in `frontend/src/strings.ts`)
 - An accuracy script that runs `eval_sentences.json` against the real model
 - Store the AI's original parse next to the confirmed values, to measure how often shopkeepers correct it
-- Add and edit customers (name, area, phone) from the app, and change an entry's date
 - Offline support (queue entries while the phone has no internet)

@@ -81,6 +81,8 @@ def create_app(
         allow_origins=settings.cors_origins,
         allow_methods=["*"],
         allow_headers=["*"],
+        # Readable by the app: the CSV's file name, and how long to wait after a 429.
+        expose_headers=["Content-Disposition", "Retry-After"],
     )
 
     app.include_router(auth.router)

@@ -19,6 +19,14 @@ def test_cors_allows_the_configured_frontend_origin(client):
     assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
 
 
+def test_cors_lets_the_app_read_the_csv_name_and_retry_after(client, shop):
+    response = client.get(
+        f"/shops/{shop['id']}/export.csv", headers={"Origin": "http://localhost:5173"}
+    )
+    exposed = response.headers["access-control-expose-headers"]
+    assert "Content-Disposition" in exposed and "Retry-After" in exposed
+
+
 def test_cors_rejects_other_origins(client):
     response = client.get("/health", headers={"Origin": "https://evil.example"})
     assert "access-control-allow-origin" not in response.headers
