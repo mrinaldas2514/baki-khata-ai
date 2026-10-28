@@ -5,6 +5,7 @@ words, while these rules are easy to get exactly right and to test:
 
     "salma apa pach sho taka baki"  ->  "salma apa 500 taka baki"
     "dedh hajar dilo"               ->  "1500 dilo"
+    "sowa sho taka"                 ->  "125 taka"
     "রহিম ২০০ টাকা দিল"              ->  "রহিম 200 টাকা দিল"
 
 To avoid touching ordinary words, a number word is only converted when it is followed by
@@ -74,10 +75,17 @@ _BASE = _words(
     }
 )
 # Used on their own before a multiplier: "dedh hajar" = 1500, "arai sho" = 250.
-_FRACTION = _words({1.5: ("dedh", "der", "derh", "দেড়"), 2.5: ("arai", "adai", "আড়াই")})
-# Modify the next number: "sare tin sho" = 350, "poune dui hajar" = 1750.
-_PLUS_HALF = {_nfc(w) for w in ("sare", "share", "sade", "saade", "সাড়ে")}
-_MINUS_QUARTER = {_nfc(w) for w in ("poune", "paune", "pone", "পৌনে")}
+_SOWA = ("sowa", "shoa", "showa", "soa", "soya", "shuwa", "সোয়া", "সওয়া")
+_FRACTION = _words(
+    {1.25: _SOWA, 1.5: ("dedh", "der", "derh", "দেড়"), 2.5: ("arai", "adai", "আড়াই")}
+)
+# Modify the next number: "sare tin sho" = 350, "poune dui hajar" = 1750,
+# "sowa tin sho" = 325 ("sowa" alone before a multiplier is 1.25: "sowa sho" = 125).
+_MODIFIERS = {
+    **{_nfc(w): 0.5 for w in ("sare", "share", "sade", "saade", "সাড়ে")},
+    **{_nfc(w): 0.25 for w in _SOWA},
+    **{_nfc(w): -0.25 for w in ("poune", "paune", "pone", "পৌনে")},
+}
 _MULTIPLIER = _words(
     {
         100: ("sho", "shoo", "sow", "shoto", "sau", "so", "hundred", "শো", "শ", "শত"),
@@ -140,13 +148,12 @@ def _parse_group(tokens: list[_Token], i: int, first: bool) -> tuple[float, int]
     n = len(tokens)
     text = tokens[i].text
 
-    if text in _FRACTION:
+    if text in _MODIFIERS and i + 1 < n and tokens[i + 1].text in _BASE:
+        value, j = _BASE[tokens[i + 1].text] + _MODIFIERS[text], i + 2
+    elif text in _FRACTION:
         value, j = _FRACTION[text], i + 1
-    elif text in _PLUS_HALF or text in _MINUS_QUARTER:
-        if i + 1 >= n or tokens[i + 1].text not in _BASE:
-            return None
-        delta = 0.5 if text in _PLUS_HALF else -0.25
-        value, j = _BASE[tokens[i + 1].text] + delta, i + 2
+    elif text in _MODIFIERS:
+        return None
     elif first and text in _STANDALONE_MULTIPLIERS:
         return _MULTIPLIER[text], i + 1
     else:

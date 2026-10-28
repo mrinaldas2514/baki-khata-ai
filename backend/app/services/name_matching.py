@@ -174,6 +174,13 @@ class _NameKey:
         return cls(" ".join(romanized), " ".join(_phonetic(w) for w in romanized))
 
 
+def same_name(a: str, b: str) -> bool:
+    """True when matching treats both as one name: case, honorifics, script and common Banglish
+    spelling differences ignored ("Rahim bhai" = "rohim" = "রহিম")."""
+    key_a, key_b = _NameKey.of(a), _NameKey.of(b)
+    return bool(key_a.phonetic) and key_a.phonetic == key_b.phonetic
+
+
 def _text_similarity(plain_a: str, phonetic_a: str, plain_b: str, phonetic_b: str) -> float:
     score = max(fuzz.ratio(plain_a, plain_b), fuzz.ratio(phonetic_a, phonetic_b))
     # Spelling variants rarely change the first sound; Karim and Rahim are different people.

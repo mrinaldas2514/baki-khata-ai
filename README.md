@@ -856,6 +856,7 @@ before the model sees them. Bangla digits (`২০০` → `200`), thousands sep
 | arai sho / আড়াই শো | 250 | arai = 2.5 × |
 | sare tin sho / সাড়ে তিন শো | 350 | sare N = N + ½ |
 | poune dui hajar | 1750 | poune N = N − ¼ |
+| sowa sho / সোয়া শো, sowa tin sho | 125, 325 | sowa = 1.25 ×; sowa N = N + ¼ |
 | ek hajar pach sho ponchash taka | 1550 | groups add up |
 | bish taka / five hundred taka | 20 / 500 | number word before taka/tk/টাকা |
 
@@ -976,13 +977,25 @@ Everything outside `app/llm/` depends only on the `LLMClient` interface in
 add a class with that method and return it from `build_llm_client()` in
 `app/llm/__init__.py` (that's how the rule-based demo parser plugs in too).
 
-### Evaluation sentences
+### Accuracy evaluation
 
-`backend/tests/fixtures/eval_sentences.json` holds 20 varied sentences (Banglish, Bangla
-script, English, mixed; credit and payment; number words, Bangla digits, honorifics, several
-items) with the expected output. The test suite checks that the file is well formed and that
-the deterministic steps agree with it. The plan is to grow it and add a script that runs it
-against the real model to measure accuracy.
+`backend/eval/` measures how well each parser reads shopkeeper sentences: 186 labelled
+sentences in 14 categories (Banglish/Bangla/English/code-mixed, credit and payment, number
+words, Bangla digits, honorifics, items, typos and missing spaces, past-tense payments, several
+entries in one sentence, no amount, not a transaction), plus any real ones you add in
+`backend/eval/my_sentences.csv`. In `backend/`:
+
+```bash
+python -m eval.run_eval --parser rules   # rule-based parser, no key needed
+python -m eval.run_eval --parser llm     # the AI model (GROQ_API_KEY in backend/.env)
+python -m eval.run_eval --parser both    # both, with a side-by-side comparison
+```
+
+It reports accuracy per field and for whole sentences, per category and language, average and
+p95 latency, and every failure, as Markdown and JSON in `backend/eval/results/`. See
+[backend/eval/README.md](backend/eval/README.md) for how answers are scored and how to add
+real sentences. (`tests/fixtures/eval_sentences.json`, the first 20 sentences, is still used by
+unit tests; all of them are in the evaluation set too.)
 
 ## Running the tests
 
@@ -1053,6 +1066,5 @@ TEST_DATABASE_URL=postgresql+psycopg://user:password@localhost:5432/baki_test py
 - Measure voice accuracy: a few recorded Banglish sentences run through both engines and
   `/parse`, to choose the default engine and Whisper model with numbers
 - A Bangla-script / English switch for the UI (all texts are in `frontend/src/strings.ts`)
-- An accuracy script that runs `eval_sentences.json` against the real model
 - Store the AI's original parse next to the confirmed values, to measure how often shopkeepers correct it
 - Offline support (queue entries while the phone has no internet)
