@@ -57,7 +57,9 @@ def parse_with_llm(llm: LLMClient, raw_text: str) -> ParsedTransaction:
             return _validate(answer)
         except (ValueError, ValidationError) as exc:
             problem = _describe(exc)
-            logger.warning("Invalid LLM answer (attempt %d): %s | %r", attempt, problem, answer)
+            # The answer holds the customer's name and amount: only at DEBUG, never at INFO+.
+            logger.warning("Invalid LLM answer (attempt %d): %s", attempt, type(exc).__name__)
+            logger.debug("Invalid LLM answer (attempt %d): %s | %r", attempt, problem, answer)
             messages += [
                 {"role": "assistant", "content": answer},
                 {"role": "user", "content": RETRY_PROMPT.format(problem=problem)},

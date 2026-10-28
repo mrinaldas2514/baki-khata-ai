@@ -4,7 +4,7 @@ import pytest
 
 from app.config import Settings
 from app.main import create_app
-from tests.conftest import FakeLLM, error_messages
+from tests.conftest import FakeLLM, auth_header, error_messages, registration
 
 
 @pytest.fixture
@@ -171,8 +171,12 @@ def test_preview_with_groq_but_no_api_key_is_503(engine, monkeypatch):
         "app.llm.get_settings", lambda: Settings(_env_file=None, llm_provider="groq")
     )
     with TestClient(create_app(engine)) as client:
-        shop = client.post("/shops", json={"name": "Shop", "owner_name": "Owner"}).json()
-        response = client.post(f"/shops/{shop['id']}/parse", json={"text": "karim 500 dilo"})
+        owner = client.post("/auth/register", json=registration()).json()
+        response = client.post(
+            f"/shops/{owner['user']['shop']['id']}/parse",
+            json={"text": "karim 500 dilo"},
+            headers=auth_header(owner["access_token"]),
+        )
     assert response.status_code == 503
     assert "GROQ_API_KEY" in response.json()["detail"]
 
@@ -241,8 +245,8 @@ def test_confirm_duplicate_new_customer_saves_nothing(client, shop, parse_url, m
     assert len(client.get(f"/shops/{shop['id']}/customers").json()) == 1
 
 
-def test_confirm_customer_of_another_shop(client, parse_url, customer):
-    other = client.post("/shops", json={"name": "Other", "owner_name": "X"}).json()
+def test_confirm_customer_of_another_shop(client, parse_url, customer, other_shop):
+    other = other_shop
     response = client.post(
         f"/shops/{other['id']}/parse/confirm",
         json={"raw_text": "rahim 50 baki", "type": "credit", "amount": 50,

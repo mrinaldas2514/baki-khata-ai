@@ -129,15 +129,15 @@ def test_status_reports_limits(client, settings):
     assert response.json() == {"available": True, "max_seconds": 30.0, "max_bytes": 1000}
 
 
-def without_key(engine, monkeypatch):
+def without_key(engine, monkeypatch, headers):
     settings = Settings(_env_file=None, groq_api_key=None)
     monkeypatch.setattr("app.stt.get_settings", lambda: settings)
     monkeypatch.setattr("app.routers.transcribe.get_settings", lambda: settings)
-    return TestClient(create_app(engine))
+    return TestClient(create_app(engine), headers=headers)
 
 
-def test_without_a_key_transcribe_is_503(engine, monkeypatch):
-    with without_key(engine, monkeypatch) as client:
+def test_without_a_key_transcribe_is_503(engine, monkeypatch, owner_headers):
+    with without_key(engine, monkeypatch, owner_headers) as client:
         response = upload(client)
         status = client.get("/transcribe/status").json()
     assert response.status_code == 503
@@ -145,9 +145,9 @@ def test_without_a_key_transcribe_is_503(engine, monkeypatch):
     assert status["available"] is False
 
 
-def test_without_a_key_503_comes_before_validation(engine, monkeypatch):
+def test_without_a_key_503_comes_before_validation(engine, monkeypatch, owner_headers):
     """The app hides the server option on 503, so a missing key must win over a bad upload."""
-    with without_key(engine, monkeypatch) as client:
+    with without_key(engine, monkeypatch, owner_headers) as client:
         response = upload(client, content_type="text/plain")
     assert response.status_code == 503
 

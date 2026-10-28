@@ -2,7 +2,13 @@ import json
 import os
 from collections.abc import Generator
 
+# Every app the tests build signs tokens with the same secret, so a login made with one test
+# app also works with another one on the same database. Set before app.config is imported.
+os.environ.setdefault("JWT_SECRET", "test-secret-for-the-test-suite-only-0123456789")
+
 import pytest
+from argon2 import PasswordHasher
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session
@@ -11,11 +17,21 @@ from sqlalchemy.pool import StaticPool
 from app.database import build_engine, create_tables
 from app.main import create_app
 from app.models import Base
+from app.privacy import CONSENT_VERSION
 from app.stt import Transcript
 
 # Defaults to in-memory SQLite. Set e.g. TEST_DATABASE_URL=postgresql+psycopg://... to run
 # the same suite against PostgreSQL (use a throwaway database: tables are dropped).
 TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL", "sqlite://")
+
+
+@pytest.fixture(autouse=True)
+def cheap_password_hashing(monkeypatch):
+    """argon2's real settings take ~50 ms and 64 MiB per hash; tests hash a lot of passwords."""
+    monkeypatch.setattr(
+        "app.security.password_hasher", PasswordHasher(time_cost=1, memory_cost=8, parallelism=1)
+    )
+    monkeypatch.setattr("app.security._dummy_hash", None)
 
 
 @pytest.fixture
@@ -88,17 +104,77 @@ def fake_stt() -> FakeSTT:
     return FakeSTT()
 
 
+def registration(
+    phone: str | None = "01811000000", password: str = "secret-pass-1", **fields
+) -> dict:
+    """A valid POST /auth/register body."""
+    body = {
+        "name": "Karim",
+        "shop_name": "Karim Store",
+        "phone": phone,
+        "password": password,
+        "consent": True,
+        "consent_version": CONSENT_VERSION,
+    }
+    return {**body, **fields}
+
+
+def auth_header(token: str) -> dict[str, str]:
+    return {"Authorization": f"Bearer {token}"}
+
+
 @pytest.fixture
-def client(engine: Engine, fake_llm: FakeLLM, fake_stt: FakeSTT) -> Generator[TestClient]:
-    with TestClient(create_app(engine, llm_client=fake_llm, stt_client=fake_stt)) as test_client:
+def app(engine: Engine, fake_llm: FakeLLM, fake_stt: FakeSTT) -> FastAPI:
+    return create_app(engine, llm_client=fake_llm, stt_client=fake_stt)
+
+
+@pytest.fixture
+def anon_client(app: FastAPI) -> Generator[TestClient]:
+    """Not logged in."""
+    with TestClient(app) as test_client:
         yield test_client
 
 
 @pytest.fixture
-def shop(client: TestClient) -> dict:
-    response = client.post("/shops", json={"name": "Karim Store", "owner_name": "Karim"})
-    assert response.status_code == 201
-    return response.json()
+def register(anon_client: TestClient):
+    """Register a shopkeeper; returns the /auth/register answer (access_token, user)."""
+
+    def _register(**fields) -> dict:
+        response = anon_client.post("/auth/register", json=registration(**fields))
+        assert response.status_code == 201, response.text
+        return response.json()
+
+    return _register
+
+
+@pytest.fixture
+def owner(register) -> dict:
+    """The shopkeeper `client` is logged in as."""
+    return register()
+
+
+@pytest.fixture
+def owner_headers(owner: dict) -> dict[str, str]:
+    return auth_header(owner["access_token"])
+
+
+@pytest.fixture
+def client(app: FastAPI, owner: dict) -> Generator[TestClient]:
+    """Logged in as `owner`, the owner of `shop`."""
+    with TestClient(app, headers=auth_header(owner["access_token"])) as test_client:
+        yield test_client
+
+
+@pytest.fixture
+def shop(owner: dict) -> dict:
+    return owner["user"]["shop"]
+
+
+@pytest.fixture
+def other_shop(register) -> dict:
+    """A second shopkeeper's shop, with `headers` to act as that shopkeeper."""
+    other = register(phone="01911000000", name="X", shop_name="Other")
+    return {**other["user"]["shop"], "headers": auth_header(other["access_token"])}
 
 
 @pytest.fixture

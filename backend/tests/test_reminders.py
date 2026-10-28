@@ -4,16 +4,18 @@ from datetime import UTC, datetime
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import update
 
 from app.config import Settings
 from app.llm import LLMProviderError
 from app.main import create_app
+from app.models import Customer
 from app.services.reminders import format_amount, whatsapp_number
 
 
 @pytest.fixture
 def rahim(customer, add_txn):
-    # Customer "Rahim" (Bazar road, 01711-000000) in "Karim Store" owned by "Karim".
+    # Customer "Rahim" (Bazar road, +8801711000000) in "Karim Store" owned by "Karim".
     add_txn(customer["id"], "credit", 1000, created_at=datetime(2026, 9, 12, 6, 0, tzinfo=UTC).isoformat())
     add_txn(customer["id"], "credit", 500)
     add_txn(customer["id"], "payment", 300)
@@ -37,7 +39,7 @@ def test_template_reminder_has_name_amount_date_and_shop(client, shop, rahim, fa
         "Karim, Karim Store"
     )
     assert body["polished"] is False
-    assert body["phone"] == "01711-000000"
+    assert body["phone"] == "+8801711000000"  # stored normalized
     assert body["whatsapp_number"] == "8801711000000"
     assert fake_llm.calls == []
 
@@ -96,25 +98,32 @@ def test_no_reminder_without_baki(client, shop, customer, add_txn):
     assert "no baki" in response.json()["detail"]
 
 
-def test_reminder_for_missing_or_other_shops_customer(client, shop, rahim):
+def test_reminder_for_missing_or_other_shops_customer(client, shop, rahim, other_shop):
     assert client.post(f"/shops/{shop['id']}/customers/999/reminder").status_code == 404
-    other = client.post("/shops", json={"name": "Other", "owner_name": "X"}).json()
+    other = other_shop
     assert client.post(f"/shops/{other['id']}/customers/{rahim['id']}/reminder").status_code == 404
 
 
-def test_demo_parser_does_not_reword_reminders(engine, monkeypatch, shop, rahim):
+def test_demo_parser_does_not_reword_reminders(
+    engine, monkeypatch, shop, rahim, owner_headers
+):
     """With only the rule-based parser (no API key) the template is used as is."""
     monkeypatch.setattr("app.llm.get_settings", lambda: Settings(_env_file=None, llm_provider="fake"))
-    with TestClient(create_app(engine)) as client:
+    with TestClient(create_app(engine), headers=owner_headers) as client:
         body = remind(client, shop, rahim).json()
     assert body["polished"] is False
     assert body["message"].startswith("Priyo Rahim,")
 
 
-def test_whatsapp_number_uses_the_configured_country_code(engine, monkeypatch, shop, rahim):
+def test_whatsapp_number_uses_the_configured_country_code(
+    engine, monkeypatch, db, shop, rahim, owner_headers
+):
+    # PHONE_COUNTRY_CODE is for numbers saved before phones were normalized (no country code).
+    db.execute(update(Customer).where(Customer.id == rahim["id"]).values(phone="01711-000000"))
+    db.commit()
     settings = Settings(_env_file=None, phone_country_code="91")
     monkeypatch.setattr("app.routers.customers.get_settings", lambda: settings)
-    with TestClient(create_app(engine)) as client:
+    with TestClient(create_app(engine), headers=owner_headers) as client:
         assert remind(client, shop, rahim, polish=False).json()["whatsapp_number"] == "911711000000"
 
 

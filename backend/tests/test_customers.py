@@ -1,5 +1,7 @@
 from datetime import UTC, datetime, timedelta
 
+import pytest
+
 from tests.conftest import error_messages
 
 
@@ -12,7 +14,7 @@ def test_create_customer(client, shop):
     body = response.json()
     assert body["shop_id"] == shop["id"]
     assert body["name"] == "Rahim"
-    assert body["phone"] == "+880 1711-000000"
+    assert body["phone"] == "+8801711000000"  # stored normalized
     assert body["note"] == "Bazar road"
     assert body["balance"] == 0
 
@@ -63,14 +65,16 @@ def test_duplicate_name_and_note_is_rejected(client, make_customer, shop):
     assert response.status_code == 409
 
 
-def test_same_name_in_another_shop_is_allowed(client, make_customer):
+def test_same_name_in_another_shop_is_allowed(client, make_customer, other_shop):
     make_customer("Rahim")
-    other = client.post("/shops", json={"name": "Other", "owner_name": "X"}).json()
-    response = client.post(f"/shops/{other['id']}/customers", json={"name": "Rahim"})
+    other = other_shop
+    response = client.post(
+        f"/shops/{other['id']}/customers", json={"name": "Rahim"}, headers=other["headers"]
+    )
     assert response.status_code == 201
 
 
-def test_list_customers_with_balances(client, shop, make_customer, add_txn):
+def test_list_customers_with_balances(client, shop, make_customer, add_txn, other_shop):
     rahim = make_customer("Rahim")
     karim = make_customer("karim")
     make_customer("Babul")
@@ -78,8 +82,10 @@ def test_list_customers_with_balances(client, shop, make_customer, add_txn):
     add_txn(rahim["id"], "payment", 100)
     add_txn(karim["id"], "credit", 50)
 
-    other = client.post("/shops", json={"name": "Other", "owner_name": "X"}).json()
-    client.post(f"/shops/{other['id']}/customers", json={"name": "Outsider"})
+    other = other_shop
+    client.post(
+        f"/shops/{other['id']}/customers", json={"name": "Outsider"}, headers=other["headers"]
+    )
 
     response = client.get(f"/shops/{shop['id']}/customers")
     assert response.status_code == 200
@@ -121,8 +127,8 @@ def test_get_missing_customer(client, shop):
     assert response.json()["detail"] == f"Customer 999 not found in shop {shop['id']}"
 
 
-def test_cannot_read_customer_through_another_shop(client, customer):
-    other = client.post("/shops", json={"name": "Other", "owner_name": "X"}).json()
+def test_cannot_read_customer_through_another_shop(client, customer, other_shop):
+    other = other_shop
     assert client.get(f"/shops/{other['id']}/customers/{customer['id']}").status_code == 404
 
 
@@ -143,3 +149,60 @@ def test_list_shows_how_old_each_baki_is(client, shop, make_customer, add_txn):
     assert listed["Old"]["balance"] == 50
     assert listed["Settled"]["owed_since"] is None
     assert listed["Nothing yet"]["owed_since"] is None
+
+
+# --- Edit and delete ----------------------------------------------------------------------
+
+
+def test_edit_name_phone_and_note(client, shop, customer):
+    url = f"/shops/{shop['id']}/customers/{customer['id']}"
+    response = client.patch(
+        url, json={"name": "Rahim Uddin", "phone": "+91 98765 43210", "note": "Haat"}
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert (body["name"], body["phone"], body["note"]) == ("Rahim Uddin", "+919876543210", "Haat")
+    assert client.get(url).json()["phone"] == "+919876543210"
+
+
+def test_edit_only_what_is_sent_and_clear_with_null(client, shop, customer, add_txn):
+    add_txn(customer["id"], "credit", 200)
+    url = f"/shops/{shop['id']}/customers/{customer['id']}"
+    body = client.patch(url, json={"phone": None}).json()
+    assert body["phone"] is None
+    assert body["name"] == "Rahim"
+    assert body["note"] == "Bazar road"
+    assert body["balance"] == 200
+
+
+@pytest.mark.parametrize(
+    ("payload", "field", "message"),
+    [
+        ({"phone": "12345"}, "phone", "Bangladesh mobile number"),
+        ({"phone": "01211000001"}, "phone", "Bangladesh mobile number"),
+        ({"name": None}, None, "name cannot be null"),
+        ({"name": "  "}, "name", "at least 1 character"),
+        ({}, None, "at least one field"),
+    ],
+)
+def test_edit_validation(client, shop, customer, payload, field, message):
+    response = client.patch(f"/shops/{shop['id']}/customers/{customer['id']}", json=payload)
+    assert response.status_code == 422
+    assert message in error_messages(response)[field]
+
+
+def test_edit_into_a_duplicate_is_409(client, shop, make_customer):
+    make_customer("Rahim", note="Tea stall")
+    other = make_customer("Rahim", note="Bazar road")
+    url = f"/shops/{shop['id']}/customers/{other['id']}"
+    assert client.patch(url, json={"note": "tea stall"}).status_code == 409
+    # Saving its own name and note again is fine.
+    assert client.patch(url, json={"name": "Rahim", "note": "Bazar road"}).status_code == 200
+
+
+def test_delete_customer_only_without_entries(client, shop, customer, make_customer, add_txn):
+    add_txn(customer["id"], "credit", 100)
+    assert client.delete(f"/shops/{shop['id']}/customers/{customer['id']}").status_code == 409
+    empty = make_customer("Nobody")
+    assert client.delete(f"/shops/{shop['id']}/customers/{empty['id']}").status_code == 204
+    assert client.get(f"/shops/{shop['id']}/customers/{empty['id']}").status_code == 404

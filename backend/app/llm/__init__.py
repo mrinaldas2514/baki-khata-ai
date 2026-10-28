@@ -15,6 +15,8 @@ __all__ = [
     "build_llm_client",
     "get_llm_client",
     "get_writing_llm_client",
+    "parsing_llm_client",
+    "writing_llm_client",
 ]
 
 logger = logging.getLogger(__name__)
@@ -55,6 +57,23 @@ def get_llm_client(request: Request) -> LLMClient:
         client = build_llm_client(get_settings())
         request.app.state.llm_client = client
     return client
+
+
+def parsing_llm_client(request: Request, *, ai_enabled: bool) -> LLMClient:
+    """The model for /parse, or, when the shopkeeper turned AI off, the rule-based parser.
+
+    With AI off nothing is sent to the AI provider: the rule-based parser runs on the server.
+    """
+    if not ai_enabled:
+        from app.llm.rule_based import RuleBasedLLMClient
+
+        return RuleBasedLLMClient()
+    return get_llm_client(request)
+
+
+def writing_llm_client(request: Request, *, ai_enabled: bool) -> LLMClient | None:
+    """`get_writing_llm_client`, or None when the shopkeeper turned AI off."""
+    return get_writing_llm_client(request) if ai_enabled else None
 
 
 def get_writing_llm_client(request: Request) -> LLMClient | None:
