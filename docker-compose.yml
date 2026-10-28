@@ -1,0 +1,61 @@
+# The whole app on one computer: PostgreSQL, the API and the frontend.
+#
+#   docker compose up --build        then open http://localhost:8080
+#   docker compose exec backend python -m app.seed      (optional: the demo login)
+#
+# The backend runs in production mode (as on a server): it migrates the database at every
+# start. Settings can be put in a .env file next to this one (JWT_SECRET, GROQ_API_KEY).
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: baki
+      POSTGRES_PASSWORD: baki
+      POSTGRES_DB: baki_khata
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U baki -d baki_khata"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    environment:
+      ENVIRONMENT: production
+      DATABASE_URL: postgresql://baki:baki@db:5432/baki_khata
+      # Only for trying it out on your own computer: set your own in .env for anything else
+      #   python3 -c "import secrets; print(secrets.token_urlsafe(48))"
+      JWT_SECRET: ${JWT_SECRET:-local-docker-only-secret-change-me-0123456789}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080,http://127.0.0.1:8080}
+      # Optional: AI parsing. Without it the rule-based parser reads the sentences.
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-120b}
+      APP_TIMEZONE: ${APP_TIMEZONE:-Asia/Dhaka}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:8000
+    environment:
+      API_ORIGIN: http://localhost:8000
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:

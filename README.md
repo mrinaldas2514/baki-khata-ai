@@ -1,5 +1,7 @@
 # Baki Khata AI
 
+[![CI](https://github.com/mrinaldas2514/baki-khata-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/mrinaldas2514/baki-khata-ai/actions/workflows/ci.yml)
+
 A mobile-first app for small shopkeepers in Bangladesh and India to track customer
 credit (*baki*) by typing or speaking Banglish instead of writing in a paper ledger.
 
@@ -419,6 +421,54 @@ and point `VITE_API_URL` at a tunnel to port 8000).
 | "Mic chalu korar onumoti nei" | The browser blocked the microphone. Click the icon left of the address bar and allow the microphone, then reload. |
 | "Ei address-e browser mic chalu korte dey na" | The page isn't on `https://` or `localhost` (see *Try it on your phone*). |
 | "Internet-e somossa, tai voice kaj korche na" | Chrome's speech recognition runs on Google's servers and needs internet. Brave blocks it: turn on *Server diye shunun* in the voice settings (needs a key). |
+
+## Running it with Docker
+
+Everything (PostgreSQL, the API and the frontend) with one command, from the repository root.
+You need [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or Docker Engine
+with the compose plugin):
+
+```bash
+docker compose up --build
+```
+
+Then open **http://localhost:8080**. For the demo login (**01700000000** / **demo1234**), in a
+second terminal:
+
+```bash
+docker compose exec backend python -m app.seed
+```
+
+- **db**: PostgreSQL 16; its data stays in the `pgdata` volume between runs.
+- **backend**: `backend/Dockerfile`, on http://localhost:8000. It runs in production mode and
+  **migrates the database at every start** (`start.sh`: `alembic upgrade head`, then uvicorn),
+  so it's the same as on a server. It waits until PostgreSQL is ready.
+- **frontend**: `frontend/Dockerfile`, the built app served by nginx (non-root, port 8080) with
+  the same caching and security headers as on Vercel (`frontend/docker/nginx.conf.template`).
+
+Settings go in a `.env` file next to `docker-compose.yml` (it's git-ignored), for example:
+
+```bash
+JWT_SECRET=paste-a-long-random-value-here   # python3 -c "import secrets; print(secrets.token_urlsafe(48))"
+GROQ_API_KEY=gsk_...                        # optional: AI parsing
+```
+
+Without `JWT_SECRET` compose uses a fixed one that is only fit for trying it on your own
+computer. Stop with Ctrl+C; `docker compose down -v` also deletes the database.
+
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on every push and pull request (the badge at the top):
+
+| Job | What it checks |
+|---|---|
+| **Backend (sqlite)** | `ruff check`, `ruff format --check`, the whole test suite on SQLite, and the evaluation with the rule-based parser |
+| **Backend (postgresql)** | the migrations on PostgreSQL (`alembic upgrade head`, `alembic check`: they build exactly the models' schema, `downgrade base`), then the whole test suite on PostgreSQL |
+| **Frontend** | `oxlint`, Prettier, the TypeScript type-check, the Vitest tests and the production build |
+| **Docker compose** | builds both images, starts PostgreSQL, the API and the frontend, and checks `/health` (database included) and that the frontend serves the app |
+
+pip and npm downloads are cached between runs (keyed on the requirements files and
+`package-lock.json`). Groq is never called: the tests use fakes.
 
 ## Deploying (Render + Vercel)
 
