@@ -3,6 +3,8 @@ import { api } from '../api/client'
 import type { Customer, TransactionType } from '../api/types'
 import type { CustomerChoice, Draft, FormValues } from '../entry'
 import { parseAmount } from '../format'
+import { cachedCustomers } from '../offline/customerCache'
+import { currentShopId } from '../session'
 import { strings } from '../strings'
 import { CustomerOption } from './CustomerSummary'
 import { Alert, AmountInput, Button, TypeToggle, inputClass } from './ui'
@@ -55,10 +57,11 @@ export function EntryForm({
 
   useEffect(() => {
     let active = true
-    // Without the list the form still works: the name just becomes a new customer.
+    // Offline: the list kept on the phone. Without any list the form still works: the name
+    // just becomes a new customer.
     api.customers().then(
       (customers) => active && setLoaded(customers),
-      () => {},
+      () => active && setLoaded(cachedCustomers(currentShopId())),
     )
     return () => {
       active = false

@@ -196,6 +196,8 @@ export interface ParseConfirm {
   type: TransactionType
   amount: number
   item: string | null
+  /** When it happened (ISO). Left out: now. Entries saved offline carry the time they were saved. */
+  created_at?: string
   customer_id?: number
   new_customer?: { name: string; note?: string | null }
 }

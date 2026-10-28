@@ -329,7 +329,8 @@ describe('edit mode', () => {
 
 describe('errors fall back to manual entry', () => {
   it.each([
-    ['network failure', 'network-error' as const, strings.errors.network],
+    // No answer at all: read on the phone, which can't find an amount here either.
+    ['network failure', 'network-error' as const, strings.offline.cantRead],
     ['AI gave a bad answer', { status: 502, body: { detail: 'invalid answer twice' } }, strings.errors.aiFailed],
     ['AI not reachable', { status: 503, body: { detail: 'not reachable' } }, strings.errors.aiUnavailable],
     ['no name or amount', { status: 422, body: { detail: 'no amount' } }, strings.errors.notTransaction],
@@ -348,7 +349,7 @@ describe('errors fall back to manual entry', () => {
     const api = mockApi({
       [RECENT]: { body: [] },
       [CUSTOMERS]: { body: [salma] },
-      [PARSE]: 'network-error',
+      [PARSE]: { status: 503, body: { detail: 'AI not reachable' } },
       [CONFIRM]: (body) => ({ status: 201, body: confirmResult(customer(11, 'Rina', 0), body as never, 250, true) }),
     })
     const user = await submit('rina 250 er jinis nilo')

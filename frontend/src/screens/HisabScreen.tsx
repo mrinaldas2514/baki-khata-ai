@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { api } from '../api/client'
-import type { Customer, ParseConfirmResult, ParsePreview, RecentTransaction } from '../api/types'
+import { ApiError, api } from '../api/client'
+import type { Customer, ParseConfirm, ParseConfirmResult, ParsePreview, RecentTransaction } from '../api/types'
 import { ConfirmationCard } from '../components/ConfirmationCard'
 import { EntryForm } from '../components/EntryForm'
 import { MicButton } from '../components/MicButton'
 import { MultiConfirm } from '../components/MultiConfirm'
+import { PendingList } from '../components/PendingList'
 import { RecentTransactions } from '../components/RecentTransactions'
-import { SavedMessage } from '../components/SavedMessage'
+import { QueuedMessage, SavedMessage } from '../components/SavedMessage'
 import { SmartEntry } from '../components/SmartEntry'
 import { VoiceSettings } from '../components/VoiceSettings'
 import { VoiceStatus } from '../components/VoiceStatus'
@@ -25,6 +26,11 @@ import {
 } from '../entry'
 import { useEntryTimer } from '../entrySpeed'
 import { parseErrorMessage, saveErrorMessage } from '../errors'
+import { cachedCustomers } from '../offline/customerCache'
+import { localPreview } from '../offline/localPreview'
+import { isOnline } from '../offline/online'
+import { type QueuedSave, discard, enqueue, newSaveKey, onSynced, useQueue } from '../offline/queue'
+import { currentShopId } from '../session'
 import { strings } from '../strings'
 import { useVoiceSettings } from '../voice/settings'
 import { useVoiceEngine } from '../voice/useVoiceEngine'
@@ -42,12 +48,16 @@ const MAX_TEXT = 500
  *                       |  |        v
  *                       +--|----> form (edit, low confidence, or manual entry after an error)
  *                          +----> multi (several customers: a card each) --save all--> saved
+ *
+ * Offline (or when the server can't be reached) the sentence is read on the phone by the same
+ * rules as "AI chhara" (offline/rules.ts), and Save keeps the entry on the phone ("queued")
+ * until it can be sent (offline/queue.ts).
  */
 type Step =
   | { kind: 'idle' }
   | { kind: 'parsing' }
-  | { kind: 'confirm'; preview: ParsePreview }
-  | { kind: 'multi'; rawText: string; items: MultiItem[]; readBy: ReadBy }
+  | { kind: 'confirm'; preview: ParsePreview; notice: string | null }
+  | { kind: 'multi'; rawText: string; items: MultiItem[]; readBy: ReadBy; notice: string | null }
   | {
       kind: 'form'
       rawText: string
@@ -57,6 +67,13 @@ type Step =
       notice: string | null
     }
   | { kind: 'saved'; rawText: string; results: ParseConfirmResult[] }
+  | { kind: 'queued'; rawText: string; item: QueuedSave }
+
+/** Who an entry is for, as the pending list shows it. */
+function summaryOf(draft: Draft): QueuedSave['summary'][number] {
+  const name = draft.choice.kind === 'existing' ? draft.choice.customer.name : draft.choice.name
+  return { name, amount: draft.amount, type: draft.type }
+}
 
 function formFromPreview(preview: ParsePreview, choice: CustomerChoice | null, notice: string | null): Step {
   const { parsed, match } = preview
@@ -122,6 +139,10 @@ export function HisabScreen({ active, aiEnabled = true }: { active: boolean; aiE
     if (active) fetchRecent()
   }, [active, fetchRecent])
 
+  // An entry kept on the phone reached the server: it belongs in the list now.
+  const queue = useQueue()
+  useEffect(() => onSynced(() => void fetchRecent()), [fetchRecent])
+
   function retryRecent() {
     setRecentFailed(false)
     fetchRecent()
@@ -134,33 +155,55 @@ export function HisabScreen({ active, aiEnabled = true }: { active: boolean; aiE
     topRef.current?.scrollIntoView?.({ block: 'start' })
   }
 
+  function showPreview(preview: ParsePreview, notice: string | null) {
+    if (preview.entries && preview.entries.length > 1) {
+      goTo({
+        kind: 'multi',
+        rawText: preview.raw_text,
+        items: toMultiItems(preview.entries),
+        readBy: { parser: preview.parser, model: preview.model },
+        notice,
+      })
+    } else if (preview.parsed.confidence < LOW_CONFIDENCE) {
+      // Not sure enough to show as a confirmation: let the shopkeeper check every field.
+      goTo(
+        formFromPreview(
+          preview,
+          null,
+          notice ? `${notice} ${strings.errors.lowConfidence}` : strings.errors.lowConfidence,
+        ),
+      )
+    } else {
+      goTo({ kind: 'confirm', preview, notice })
+    }
+  }
+
+  function manualForm(rawText: string, notice: string) {
+    goTo({ kind: 'form', rawText, title: strings.manualTitle, initial: EMPTY_FORM, suggestions: [], notice })
+  }
+
+  /** No server: read it on the phone with the rules and the last customer list. */
+  function readOnPhone(sentence: string, notice: string) {
+    const preview = localPreview(sentence, cachedCustomers(currentShopId()))
+    if (preview) showPreview(preview, notice)
+    else manualForm(sentence, strings.offline.cantRead)
+  }
+
   async function handleSubmit(sentence: string) {
     setHeardText(null)
+    if (!isOnline()) {
+      readOnPhone(sentence, strings.offline.readOnPhone)
+      return
+    }
     goTo({ kind: 'parsing' })
     try {
-      const preview = await api.parse(sentence)
-      if (preview.entries && preview.entries.length > 1) {
-        goTo({
-          kind: 'multi',
-          rawText: preview.raw_text,
-          items: toMultiItems(preview.entries),
-          readBy: { parser: preview.parser, model: preview.model },
-        })
-      } else if (preview.parsed.confidence < LOW_CONFIDENCE) {
-        // Not sure enough to show as a confirmation: let the shopkeeper check every field.
-        goTo(formFromPreview(preview, null, strings.errors.lowConfidence))
-      } else {
-        goTo({ kind: 'confirm', preview })
-      }
+      showPreview(await api.parse(sentence), null)
     } catch (error) {
-      goTo({
-        kind: 'form',
-        rawText: sentence,
-        title: strings.manualTitle,
-        initial: EMPTY_FORM,
-        suggestions: [],
-        notice: parseErrorMessage(error),
-      })
+      if (error instanceof ApiError && error.kind === 'network') {
+        readOnPhone(sentence, strings.offline.readAfterNetworkError)
+      } else {
+        manualForm(sentence, parseErrorMessage(error))
+      }
     }
   }
 
@@ -182,34 +225,62 @@ export function HisabScreen({ active, aiEnabled = true }: { active: boolean; aiE
     goTo({ kind: 'saved', rawText, results })
   }
 
-  async function handleSave(rawText: string, draft: Draft) {
+  /** Keep it on the phone, to be sent with the same Idempotency-Key when there is internet. */
+  async function saveOnPhone(save: Parameters<typeof enqueue>[1]) {
+    const item = await enqueue(currentShopId(), save)
+    timer.reset()
+    setText('')
+    goTo({ kind: 'queued', rawText: save.rawText, item })
+  }
+
+  /**
+   * Save one entry (/parse/confirm) or several (/parse/confirm-many). Offline, or when the
+   * request gets no answer at all, the entry is kept on the phone instead, with the same key:
+   * if the request did reach the server, the retry is answered without saving it twice.
+   */
+  async function persist(rawText: string, drafts: Draft[]) {
+    const entries: ParseConfirm[] = drafts.map((draft) => toConfirmRequest(rawText, draft))
+    const save = {
+      key: newSaveKey(),
+      rawText,
+      endpoint: entries.length === 1 ? ('confirm' as const) : ('confirm-many' as const),
+      entries,
+      summary: drafts.map(summaryOf),
+      timing: timer.current(),
+    }
     setSaving(true)
     setSaveError(null)
     try {
-      showSaved(rawText, [await api.confirm(toConfirmRequest(rawText, draft), timer.current())])
+      if (!isOnline()) {
+        await saveOnPhone(save)
+      } else if (save.endpoint === 'confirm') {
+        showSaved(rawText, [await api.confirm(entries[0], save.timing, save.key)])
+      } else {
+        showSaved(rawText, (await api.confirmMany(entries, save.timing, save.key)).results)
+      }
     } catch (error) {
-      setSaveError(saveErrorMessage(error))
+      if (error instanceof ApiError && error.kind === 'network') await saveOnPhone(save)
+      else setSaveError(saveErrorMessage(error))
     } finally {
       setSaving(false)
     }
   }
 
-  async function handleSaveAll(rawText: string, items: MultiItem[]) {
+  const handleSave = (rawText: string, draft: Draft) => persist(rawText, [draft])
+
+  function handleSaveAll(rawText: string, items: MultiItem[]) {
     const drafts = items.map(toDraft)
     if (drafts.some((draft) => draft === null)) return
-    setSaving(true)
-    setSaveError(null)
-    try {
-      const { results } = await api.confirmMany(
-        drafts.map((draft) => toConfirmRequest(rawText, draft!)),
-        timer.current(),
-      )
-      showSaved(rawText, results)
-    } catch (error) {
-      setSaveError(saveErrorMessage(error))
-    } finally {
-      setSaving(false)
-    }
+    return persist(rawText, drafts as Draft[])
+  }
+
+  /** Undo of an entry still on the phone: throw it away (too late once it was sent). */
+  async function undoQueued(rawText: string, item: QueuedSave) {
+    if (!queue.items.some((waiting) => waiting.key === item.key)) throw new Error('already sent')
+    await discard(currentShopId(), item.key)
+    setText(rawText)
+    goTo({ kind: 'idle' })
+    setUndoNotice(true)
   }
 
   /** "Bhul hoyeche? Undo": delete what was just saved, and any customer it created. */
@@ -229,7 +300,7 @@ export function HisabScreen({ active, aiEnabled = true }: { active: boolean; aiE
     fetchRecent()
   }
 
-  const showEntry = step.kind === 'idle' || step.kind === 'parsing' || step.kind === 'saved'
+  const showEntry = step.kind === 'idle' || step.kind === 'parsing' || step.kind === 'saved' || step.kind === 'queued'
 
   return (
     <div ref={topRef} className="flex scroll-mt-4 flex-col gap-6">
@@ -238,6 +309,13 @@ export function HisabScreen({ active, aiEnabled = true }: { active: boolean; aiE
           results={step.results}
           onClose={() => goTo({ kind: 'idle' })}
           onUndo={() => undo(step.rawText, step.results)}
+        />
+      )}
+      {step.kind === 'queued' && (
+        <QueuedMessage
+          item={step.item}
+          onClose={() => goTo({ kind: 'idle' })}
+          onUndo={() => undoQueued(step.rawText, step.item)}
         />
       )}
       {undoNotice && (
@@ -301,6 +379,13 @@ export function HisabScreen({ active, aiEnabled = true }: { active: boolean; aiE
         </div>
       )}
 
+      {(step.kind === 'confirm' || step.kind === 'multi') && step.notice && (
+        <Alert tone="warning">
+          <p>{step.notice}</p>
+          <p className="mt-1 text-base">{strings.offline.staleBalance}</p>
+        </Alert>
+      )}
+
       {step.kind === 'confirm' && (
         <ConfirmationCard
           key={step.preview.raw_text}
@@ -340,6 +425,7 @@ export function HisabScreen({ active, aiEnabled = true }: { active: boolean; aiE
         />
       )}
 
+      <PendingList shopId={currentShopId()} />
       <RecentTransactions transactions={recent} failed={recentFailed} onRetry={retryRecent} highlightId={highlightId} />
     </div>
   )

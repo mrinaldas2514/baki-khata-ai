@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { ParseConfirmResult } from '../api/types'
+import type { QueuedSave } from '../offline/queue'
 import { describeBalance, formatTaka } from '../format'
 import { strings } from '../strings'
 import { TYPE_STYLES } from '../typeStyles'
@@ -71,6 +72,35 @@ function SavedEntry({ result, compact }: { result: ParseConfirmResult; compact: 
         </p>
       </div>
     </>
+  )
+}
+
+/** Saved on the phone, not yet on the server: what, and that it goes by itself later. */
+export function QueuedMessage({
+  item,
+  onClose,
+  onUndo,
+}: {
+  item: QueuedSave
+  onClose: () => void
+  /** Throw the entry away before it's sent. Throws if it was already sent. */
+  onUndo: () => Promise<void>
+}) {
+  return (
+    <section role="status" className="flex flex-col gap-3 rounded-3xl border-2 border-amber-400 bg-amber-50 p-4">
+      <p className="text-2xl font-bold text-amber-950">📱 {strings.offline.queuedTitle}</p>
+      {item.summary.map((entry, i) => (
+        <p key={i} className="text-xl text-stone-800" data-testid="queued-entry">
+          {entry.name}: <span className={`font-bold ${TYPE_STYLES[entry.type].text}`}>{formatTaka(entry.amount)}</span>{' '}
+          {TYPE_STYLES[entry.type].label}
+        </p>
+      ))}
+      <p className="text-lg text-stone-800">⏳ {strings.offline.queuedBody}</p>
+      <UndoButton onUndo={onUndo} />
+      <Button variant="secondary" onClick={onClose}>
+        {strings.close}
+      </Button>
+    </section>
   )
 }
 

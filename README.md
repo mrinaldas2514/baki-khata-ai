@@ -74,6 +74,44 @@ saved as `raw_text`.
 
 Tapping an entry in the list below the box opens that customer's khata.
 
+### Weak or no internet (offline)
+
+Shops often have a bad connection, so the app keeps working without one:
+
+- **Installable, opens offline.** It's a PWA: Chrome offers *Install app* / *Add to Home
+  screen* (manifest `frontend/public/manifest.webmanifest`, icons in `frontend/public/icons/`).
+  A service worker (`frontend/pwa/sw.js`) keeps the app's own files on the phone, so it opens at
+  once with good, weak or no internet. It never touches the API: answers with names and money
+  are not cached (the API also says `Cache-Control: no-store`).
+- **Online / Offline** in the title bar (and how many entries are still on the phone, e.g.
+  *Offline · 2 ta pending*). Screen readers hear the change.
+- **Writing an entry offline.** When the phone is offline (or `/parse` gets no answer at all),
+  the sentence is read **on the phone** by the same rule-based parser as *AI bondho*, ported to
+  TypeScript (`frontend/src/offline/rules.ts`), and matched against the shop's last customer list
+  (kept on the phone). The card says **AI chhara** and *Internet nei, tai phone-ei pora hoyeche*;
+  balances are the last known ones. If the rules can't read it, the manual form opens as usual.
+- **Saved on the phone, sent later.** *Save korun* while offline (or when the save gets no
+  answer) keeps the entry in IndexedDB: *📱 Phone-e save hoyeche*, and it appears above the
+  recent list with **⏳ Pending sync**. It's sent by itself, **in the order written**, as soon as
+  there is internet (when the phone comes back online, every 20 s while some wait, and at every
+  start; *Ekhon pathan* sends now). It keeps the time it was written (`created_at`), so the khata
+  shows when it really happened. Entries survive closing the app. *Undo* works on them too.
+- **Never saved twice.** Every save carries a random **`Idempotency-Key`** from the moment
+  *Save* is pressed, and every retry sends the same key. If a try did reach the server but its
+  answer was lost, the server answers the stored result instead of saving it again (see
+  [the API](#api)). A new customer written twice offline ("tanvir 50 baki", then "tanvir 20
+  dilo") is created once: later entries go to the customer the first one created.
+- **When the server refuses one** (say, a new customer whose name already exists), it's marked
+  *⚠ Sync hoyni* with the reason and *Bad din* to drop it; the others go on. Logging out keeps
+  waiting entries (Settings warns); deleting the account deletes them from the phone too.
+
+**Try it in Chrome DevTools:** run the app (`npm run build && npm run preview`, or Docker: the
+service worker only runs in a production build), log in once, then DevTools → **Network** →
+throttling **Offline** (or **Application → Service workers → Offline**). Reload: the app opens.
+Write `rahim 200 baki`, save: it shows *Pending sync*. Set **No throttling**: it's sent within
+a moment and appears in the recent list. **Application → IndexedDB → baki-khata → queue** shows
+what's waiting; **Slow 3G** shows the weak-connection behaviour.
+
 ## The screens
 
 ### Login and register
@@ -702,8 +740,8 @@ customer or transaction of another shop) answers **404**, exactly like one that 
 | DELETE | `/shops/{shop_id}/transactions/{transaction_id}` | Delete a transaction (204) |
 | GET | `/shops/{shop_id}/dashboard?overdue_days=30` | Total outstanding, today's collection and new baki, top 5, overdue customers, and `last_7_days` (`date`, `credit`, `payment` per local day, oldest first) |
 | POST | `/shops/{shop_id}/parse` | Turn one free-form sentence into a transaction **preview** (saves nothing); `entries` has one item per customer |
-| POST | `/shops/{shop_id}/parse/confirm` | Save the confirmed preview, creating the customer if new |
-| POST | `/shops/{shop_id}/parse/confirm-many` | Save several confirmed entries together (`{"entries": [...]}`, 1–10), all or none |
+| POST | `/shops/{shop_id}/parse/confirm` | Save the confirmed preview, creating the customer if new. Optional `Idempotency-Key` header (see below) |
+| POST | `/shops/{shop_id}/parse/confirm-many` | Save several confirmed entries together (`{"entries": [...]}`, 1–10), all or none. Optional `Idempotency-Key` header |
 | POST | `/transcribe` | A short voice recording (multipart `file`, optional `language`) → `{"text": "..."}` (saves nothing). `403` when the user turned AI off |
 | GET | `/transcribe/status` | Whether server-side transcription can be used (not without a key, not with AI off), and its size/length limits |
 
@@ -1109,6 +1147,13 @@ same order. One commit: if any entry fails (another shop's customer, a name clas
 saved. Two entries for the same new customer ("tanvir 50 baki, tanvir 20 dilo") create them once.
 Each result's balance is the customer's balance after all of them.
 
+**Idempotency-Key** (both confirm endpoints): a random key per save, 8–100 of `A-Z a-z 0-9 _ . : -`
+(the app uses a UUID). The answer is stored with the shop and key in the same commit as the
+entries (`idempotency_keys`). Sending the same save again with the key answers the stored result
+(`201`, header `Idempotent-Replayed: true`) and saves nothing; the same key with different data
+is `409`. Two requests racing with one key save once (the unique key stops the second at its
+commit). A failed save doesn't use the key up. Keys are forgotten after 30 days.
+
 **Errors**: `422` the sentence has no name/amount, or invalid input; `502` the model gave an
 invalid answer twice; `503` `LLM_PROVIDER=groq` without a `GROQ_API_KEY`, or Groq is
 unreachable / rejected the request (details are logged, not returned).
@@ -1209,4 +1254,3 @@ TEST_DATABASE_URL=postgresql+psycopg://user:password@localhost:5432/baki_test py
   `/parse`, to choose the default engine and Whisper model with numbers
 - A Bangla-script / English switch for the UI (all texts are in `frontend/src/strings.ts`)
 - Store the AI's original parse next to the confirmed values, to measure how often shopkeepers correct it
-- Offline support (queue entries while the phone has no internet)

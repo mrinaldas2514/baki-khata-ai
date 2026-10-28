@@ -112,6 +112,9 @@ jobs:
         run: |
           curl --fail --silent http://localhost:8000/health | grep '"database":"ok"'
           curl --fail --silent http://localhost:8080/ | grep '<div id="root">'
+          # Installable and offline: the manifest and the service worker (never cached by nginx).
+          curl --fail --silent http://localhost:8080/manifest.webmanifest | grep '"display": "standalone"'
+          curl --fail --silent --include http://localhost:8080/sw.js | grep -i 'cache-control: no-cache'
       - name: Logs
         if: failure()
         run: docker compose logs

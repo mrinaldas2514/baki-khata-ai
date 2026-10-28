@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
+import { api } from './api/client'
 import { BottomNav } from './components/BottomNav'
+import { OnlineStatus } from './components/OnlineStatus'
 import { type CustomerSort } from './customers'
+import { loadCustomerCache } from './offline/customerCache'
+import { isOnline } from './offline/online'
+import { startAutoSync } from './offline/queue'
 import { href, tabOf, useRoute } from './route'
 import { LoginScreen, RegisterScreen } from './screens/AuthScreens'
 import { CustomersScreen } from './screens/CustomersScreen'
@@ -60,6 +65,16 @@ function LoggedIn({ session }: { session: Session }) {
     topRef.current?.scrollIntoView?.({ block: 'start' })
   }, [route])
 
+  // Working offline: entries kept on the phone are sent when there is internet, and the last
+  // customer list is on the phone (and refreshed now) for reading entries without the server.
+  const shopId = session.user.shop.id
+  useEffect(() => {
+    void loadCustomerCache(shopId).then(() => {
+      if (isOnline()) api.customers().catch(() => {})
+    })
+    return startAutoSync(shopId)
+  }, [shopId])
+
   useEffect(() => {
     // Just logged in or registered: start on the Hisab tab.
     if (route.name === 'login' || route.name === 'register') window.location.hash = href.hisab
@@ -90,7 +105,12 @@ function Header({ shopName, settingsOpen = false }: { shopName?: string; setting
       <div className="mx-auto flex min-h-12 max-w-md items-center justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold">{strings.appTitle}</h1>
-          {shopName && <p className="truncate text-base text-emerald-100">{shopName}</p>}
+          {shopName && (
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <p className="truncate text-base text-emerald-100">{shopName}</p>
+              <OnlineStatus />
+            </div>
+          )}
         </div>
         {shopName && (
           <a

@@ -144,10 +144,11 @@ describe('several customers in one sentence', () => {
   })
 
   it('a failed save says so and keeps every card', async () => {
-    const { user } = await submit({ [CONFIRM_MANY]: 'network-error' })
+    // (No answer at all keeps them on the phone instead: Offline.test.tsx.)
+    const { user } = await submit({ [CONFIRM_MANY]: { status: 500, body: { detail: 'Something went wrong' } } })
     await user.click(within(cards()[1]).getByRole('button', { name: /Karim.*Haat/ }))
     await user.click(screen.getByRole('button', { name: strings.multi.saveAll(3) }))
-    expect(await screen.findByText(strings.errors.network)).toBeInTheDocument()
+    expect(await screen.findByText(strings.errors.saveFailed)).toBeInTheDocument()
     expect(cards()).toHaveLength(3)
   })
 })
