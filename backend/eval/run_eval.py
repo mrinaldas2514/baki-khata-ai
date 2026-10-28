@@ -259,7 +259,10 @@ def save_comparison(rules: Run, llm: Run, out: Path) -> list[Path]:
 
 def _print_progress(n: int, total: int, result: SentenceResult) -> None:
     mark = "ok" if result.score.all_correct else "WRONG"
-    print(f"  [{n}/{total}] {mark:5} {result.latency_ms:7.0f} ms  {result.sentence.id}", file=sys.stderr)
+    print(
+        f"  [{n}/{total}] {mark:5} {result.latency_ms:7.0f} ms  {result.sentence.id}",
+        file=sys.stderr,
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -304,7 +307,10 @@ def main(argv: list[str] | None = None) -> int:
     day = date.today()
     runs = []
     for llm in parsers:
-        print(f"Evaluating {llm.parser} ({llm.model}) on {len(sentences)} sentences...", file=sys.stderr)
+        print(
+            f"Evaluating {llm.parser} ({llm.model}) on {len(sentences)} sentences...",
+            file=sys.stderr,
+        )
         progress = _print_progress if llm.parser == "llm" else None
         delay = opts.delay if llm.parser == "llm" else 0.0
         runs.append(run(llm, sentences, day, delay=delay, progress=progress))

@@ -239,7 +239,19 @@ def test_other_provider_errors_are_not_retried(fake_llm: FakeLLM):
 
 
 def test_rules_run_writes_markdown_and_json(tmp_path, capsys):
-    assert run_eval.main(["--parser", "rules", "--out", str(tmp_path), "--my-sentences", str(tmp_path / "none.csv")]) == 0
+    assert (
+        run_eval.main(
+            [
+                "--parser",
+                "rules",
+                "--out",
+                str(tmp_path),
+                "--my-sentences",
+                str(tmp_path / "none.csv"),
+            ]
+        )
+        == 0
+    )
     stem = f"{date.today().isoformat()}_rules_rule-based"
     md = (tmp_path / f"{stem}.md").read_text(encoding="utf-8")
     data = json.loads((tmp_path / f"{stem}.json").read_text(encoding="utf-8"))
@@ -280,7 +292,9 @@ class EchoLLM(RuleBasedLLMClient):
 
 def test_both_writes_a_side_by_side_comparison(monkeypatch, tmp_path):
     monkeypatch.setattr(
-        run_eval, "build_parser", lambda kind, _model: EchoLLM() if kind == "llm" else RuleBasedLLMClient()
+        run_eval,
+        "build_parser",
+        lambda kind, _model: EchoLLM() if kind == "llm" else RuleBasedLLMClient(),
     )
     assert run_eval.main(["--parser", "both", "--out", str(tmp_path), "--limit", "20"]) == 0
     today = date.today().isoformat()
@@ -290,6 +304,8 @@ def test_both_writes_a_side_by_side_comparison(monkeypatch, tmp_path):
         for stem in ("rules_rule-based", "llm_openai-echo-1", "both_rule-based_vs_openai-echo-1")
         for ext in ("md", "json")
     )
-    comparison = (tmp_path / f"{today}_both_rule-based_vs_openai-echo-1.md").read_text(encoding="utf-8")
+    comparison = (tmp_path / f"{today}_both_rule-based_vs_openai-echo-1.md").read_text(
+        encoding="utf-8"
+    )
     assert "| Metric | rules (`rule-based`) | llm (`openai/echo-1`) |" in comparison
     assert "## Right only with llm (0)" in comparison

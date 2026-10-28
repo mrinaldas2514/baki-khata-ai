@@ -26,7 +26,9 @@ def test_empty_dashboard(client, shop):
     assert body["today"] == datetime.now(ZoneInfo("Asia/Dhaka")).date().isoformat()
 
 
-def test_total_outstanding_ignores_settled_and_advance_customers(client, shop, make_customer, add_txn):
+def test_total_outstanding_ignores_settled_and_advance_customers(
+    client, shop, make_customer, add_txn
+):
     owes = make_customer("Owes")
     settled = make_customer("Settled")
     advance = make_customer("Advance")
@@ -114,9 +116,7 @@ def test_overdue_days_validation(client, shop):
 def test_dashboard_ignores_other_shops(client, shop, make_customer, add_txn, other_shop):
     other = other_shop
     as_other = {"headers": other["headers"]}
-    c = client.post(
-        f"/shops/{other['id']}/customers", json={"name": "Outsider"}, **as_other
-    ).json()
+    c = client.post(f"/shops/{other['id']}/customers", json={"name": "Outsider"}, **as_other).json()
     client.post(
         f"/shops/{other['id']}/customers/{c['id']}/transactions",
         json={"type": "credit", "amount": 500, "created_at": ago(days=50)},
@@ -147,8 +147,15 @@ def test_today_uses_shop_local_day(db):
     db.flush()
 
     def pay(amount, at):
-        db.add(Transaction(shop_id=shop.id, customer_id=c.id, type=TransactionType.PAYMENT,
-                           amount=amount, created_at=at))
+        db.add(
+            Transaction(
+                shop_id=shop.id,
+                customer_id=c.id,
+                type=TransactionType.PAYMENT,
+                amount=amount,
+                created_at=at,
+            )
+        )
 
     pay(10, datetime(2026, 10, 25, 17, 30, tzinfo=UTC))  # 23:30 on the 25th in Dhaka
     pay(20, datetime(2026, 10, 25, 18, 30, tzinfo=UTC))  # 00:30 on the 26th in Dhaka
@@ -184,7 +191,7 @@ def test_today_new_credit_and_last_7_days(client, shop, make_customer, add_txn):
         (300, 100), (0, 0), (0, 0), (0, 0), (40, 0), (0, 0), (200, 60),
     ]  # fmt: skip
     dates = [datetime.fromisoformat(d["date"]).date() for d in days]
-    assert all((b - a).days == 1 for a, b in zip(dates, dates[1:]))
+    assert all((b - a).days == 1 for a, b in zip(dates, dates[1:], strict=False))
 
 
 def test_last_7_days_uses_shop_local_days(db):
@@ -195,14 +202,28 @@ def test_last_7_days_uses_shop_local_days(db):
     db.add(c)
     db.flush()
     # 23:30 on the 25th and 00:30 on the 26th in Dhaka (UTC+6).
-    for amount, at in [(10, datetime(2026, 10, 25, 17, 30, tzinfo=UTC)),
-                       (20, datetime(2026, 10, 25, 18, 30, tzinfo=UTC))]:
-        db.add(Transaction(shop_id=shop.id, customer_id=c.id, type=TransactionType.CREDIT,
-                           amount=amount, created_at=at))
+    for amount, at in [
+        (10, datetime(2026, 10, 25, 17, 30, tzinfo=UTC)),
+        (20, datetime(2026, 10, 25, 18, 30, tzinfo=UTC)),
+    ]:
+        db.add(
+            Transaction(
+                shop_id=shop.id,
+                customer_id=c.id,
+                type=TransactionType.CREDIT,
+                amount=amount,
+                created_at=at,
+            )
+        )
     db.commit()
 
     now = datetime(2026, 10, 26, 12, 0, tzinfo=UTC)
     days = get_dashboard(db, shop.id, now=now, local_tz=ZoneInfo("Asia/Dhaka")).last_7_days
-    assert [(d.date.isoformat(), d.credit) for d in days[-2:]] == [("2026-10-25", 10), ("2026-10-26", 20)]
+    assert [(d.date.isoformat(), d.credit) for d in days[-2:]] == [
+        ("2026-10-25", 10),
+        ("2026-10-26", 20),
+    ]
     assert days[0].date.isoformat() == "2026-10-20"
-    assert get_dashboard(db, shop.id, now=now, local_tz=ZoneInfo("Asia/Dhaka")).today_new_credit == 20
+    assert (
+        get_dashboard(db, shop.id, now=now, local_tz=ZoneInfo("Asia/Dhaka")).today_new_credit == 20
+    )

@@ -83,8 +83,10 @@ def score_sentence(sentence: Sentence, got: list[Got]) -> SentenceScore:
         else:
             fields.append(dict.fromkeys(FIELDS, False))
     extra = max(0, len(got) - len(sentence.expected))
-    all_correct = extra == 0 and len(got) == len(sentence.expected) and all(
-        all(entry.values()) for entry in fields
+    all_correct = (
+        extra == 0
+        and len(got) == len(sentence.expected)
+        and all(all(entry.values()) for entry in fields)
     )
     return SentenceScore(fields=fields, extra_entries=extra, all_correct=all_correct)
 

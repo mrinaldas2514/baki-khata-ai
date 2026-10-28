@@ -82,7 +82,9 @@ def test_model_ids_with_a_slash_pass(caplog):
     with pytest.raises(groq.NotFoundError, match="openai%2Fgpt-oss-120b"):
         models.retrieve("openai/gpt-oss-120b")  # what the old check did
     with caplog.at_level(logging.WARNING):
-        assert check_configured_models(settings(groq_model="openai/gpt-oss-20b"), client(models)) == []
+        assert (
+            check_configured_models(settings(groq_model="openai/gpt-oss-20b"), client(models)) == []
+        )
     assert caplog.records == []
     assert models.listed == 1  # one request for every model
 
@@ -158,7 +160,10 @@ def test_bad_key_and_network_errors_never_stop_startup(caplog):
 
 
 def test_rate_limit_is_not_a_model_problem():
-    assert model_rejection(api_error(groq.RateLimitError, 429, "rate_limit_exceeded", "Slow down")) is None
+    assert (
+        model_rejection(api_error(groq.RateLimitError, 429, "rate_limit_exceeded", "Slow down"))
+        is None
+    )
 
 
 def test_startup_runs_the_check_when_a_key_is_set(engine, monkeypatch):
@@ -181,7 +186,9 @@ def test_chat_request_with_a_retired_model_logs_the_fix(caplog):
     def create(**_kwargs):
         raise error
 
-    client._client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
+    client._client = SimpleNamespace(
+        chat=SimpleNamespace(completions=SimpleNamespace(create=create))
+    )
     with caplog.at_level(logging.ERROR, logger="app.groq_models"), pytest.raises(LLMProviderError):
         client.complete_json([{"role": "user", "content": "rahim 100 baki"}])
     assert "Set GROQ_MODEL in backend/.env" in caplog.records[0].message
@@ -193,7 +200,9 @@ def test_transcription_with_an_unknown_model_logs_the_fix(caplog):
     def create(**_kwargs):
         raise not_found("whisper-huge")
 
-    client._client = SimpleNamespace(audio=SimpleNamespace(transcriptions=SimpleNamespace(create=create)))
+    client._client = SimpleNamespace(
+        audio=SimpleNamespace(transcriptions=SimpleNamespace(create=create))
+    )
     with caplog.at_level(logging.ERROR, logger="app.groq_models"), pytest.raises(STTProviderError):
         client.transcribe(b"audio", "voice.webm")
     assert "Set GROQ_STT_MODEL in backend/.env" in caplog.records[0].message
@@ -215,7 +224,9 @@ def test_reasoning_models_get_low_effort_and_room_to_think(model, extra):
         message = SimpleNamespace(content='{"ok": true}')
         return SimpleNamespace(choices=[SimpleNamespace(message=message)])
 
-    client._client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
+    client._client = SimpleNamespace(
+        chat=SimpleNamespace(completions=SimpleNamespace(create=create))
+    )
     assert client.complete_json([{"role": "user", "content": "hi"}]) == '{"ok": true}'
     assert sent["response_format"] == {"type": "json_object"}
     assert {k: sent.get(k) for k in extra} == extra

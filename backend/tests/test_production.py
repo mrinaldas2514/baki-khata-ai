@@ -75,10 +75,14 @@ def test_localhost_over_http_is_allowed_for_docker_compose():
 
 
 @pytest.mark.parametrize(
-    "url", ["postgres://u:p@host/db", "postgresql://u:p@host/db", "postgresql+psycopg://u:p@host/db"]
+    "url",
+    ["postgres://u:p@host/db", "postgresql://u:p@host/db", "postgresql+psycopg://u:p@host/db"],
 )
 def test_postgres_urls_get_the_psycopg_driver(url):
-    assert Settings(_env_file=None, database_url=url).database_url == "postgresql+psycopg://u:p@host/db"
+    assert (
+        Settings(_env_file=None, database_url=url).database_url
+        == "postgresql+psycopg://u:p@host/db"
+    )
 
 
 def test_the_app_refuses_to_start_with_unsafe_production_settings(engine, use_settings):
@@ -175,7 +179,9 @@ def test_voice_uploads_may_be_bigger(client, fake_stt):
     fake_stt.reply("rahim 100 baki")
     audio = b"\x1a\x45\xdf\xa3" + b"0" * (300 * 1024)  # 300 KB: over the JSON limit, under audio's
     response = client.post(
-        "/transcribe", files={"file": ("voice.webm", audio, "audio/webm")}, data={"language": "bn-BD"}
+        "/transcribe",
+        files={"file": ("voice.webm", audio, "audio/webm")},
+        data={"language": "bn-BD"},
     )
     assert response.status_code == 200, response.text
 

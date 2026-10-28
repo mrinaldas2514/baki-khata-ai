@@ -112,9 +112,11 @@ def get_customer_ledger(
     history, so the newest page of a long ledger shows the same numbers as the full list.
     """
     customer = get_customer(db, shop_id, customer_id)
-    with_running = select(
-        Transaction, running_balance_sql().label("running_balance")
-    ).where(Transaction.customer_id == customer.id).subquery()
+    with_running = (
+        select(Transaction, running_balance_sql().label("running_balance"))
+        .where(Transaction.customer_id == customer.id)
+        .subquery()
+    )
     txn = aliased(Transaction, with_running)
     if order == "newest":
         sort = (txn.created_at.desc(), txn.id.desc())

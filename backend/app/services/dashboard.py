@@ -58,9 +58,7 @@ def _summary(customer: Customer, balance: int) -> CustomerBalanceSummary:
     )
 
 
-def _daily_totals(
-    db: Session, shop_id: int, now: datetime, local_tz: ZoneInfo
-) -> list[DaySummary]:
+def _daily_totals(db: Session, shop_id: int, now: datetime, local_tz: ZoneInfo) -> list[DaySummary]:
     """New baki and joma for each of the last CHART_DAYS local days, oldest first, ending today.
 
     Days are the shop's local calendar days (APP_TIMEZONE), the same as "today's collection".

@@ -52,7 +52,9 @@ def test_no_timing_or_an_impossible_one_saves_the_entry_but_no_timing(client, sh
     url = f"/shops/{shop['id']}/parse/confirm"
     assert client.post(url, json=confirm_body()).status_code == 201
     over_an_hour = {"duration_ms": 2 * 60 * 60 * 1000, "input": "typed"}
-    response = client.post(url, json=confirm_body(new_customer={"name": "Rina"}, timing=over_an_hour))
+    response = client.post(
+        url, json=confirm_body(new_customer={"name": "Rina"}, timing=over_an_hour)
+    )
     assert response.status_code == 201
     assert timings(db) == []
 

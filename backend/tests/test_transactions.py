@@ -98,7 +98,9 @@ def test_naive_date_is_read_as_shop_local_time(client, txn_url):
 
 def test_future_date_is_rejected(client, txn_url):
     future = datetime.now(UTC) + timedelta(days=1)
-    response = client.post(txn_url, json={"type": "credit", "amount": 10, "created_at": iso(future)})
+    response = client.post(
+        txn_url, json={"type": "credit", "amount": 10, "created_at": iso(future)}
+    )
     assert response.status_code == 422
     assert error_messages(response)["created_at"] == "Date cannot be in the future"
 
@@ -125,8 +127,12 @@ def test_create_for_customer_of_another_shop(client, customer, other_shop):
 def test_list_with_running_balance(client, customer, txn_url):
     now = datetime.now(UTC)
     # Added out of order on purpose; the ledger is sorted by date.
-    client.post(txn_url, json={"type": "payment", "amount": 200, "created_at": iso(now - timedelta(days=1))})
-    client.post(txn_url, json={"type": "credit", "amount": 500, "created_at": iso(now - timedelta(days=5))})
+    client.post(
+        txn_url, json={"type": "payment", "amount": 200, "created_at": iso(now - timedelta(days=1))}
+    )
+    client.post(
+        txn_url, json={"type": "credit", "amount": 500, "created_at": iso(now - timedelta(days=5))}
+    )
     client.post(txn_url, json={"type": "credit", "amount": 100})
 
     response = client.get(txn_url)
@@ -144,7 +150,9 @@ def test_list_empty(client, txn_url):
     assert body["customer"]["balance"] == 0
 
 
-def test_list_only_shows_that_customers_transactions(client, make_customer, add_txn, customer, txn_url):
+def test_list_only_shows_that_customers_transactions(
+    client, make_customer, add_txn, customer, txn_url
+):
     other = make_customer("Karim")
     add_txn(other["id"], "credit", 999)
     add_txn(customer["id"], "credit", 1)
@@ -237,7 +245,12 @@ def test_delete_transaction(client, shop, customer, add_txn):
     assert response.content == b""
     assert client.get(url).status_code == 404
     assert client.delete(url).status_code == 404
-    ids = [t["id"] for t in client.get(f"/shops/{shop['id']}/customers/{customer['id']}/transactions").json()["transactions"]]
+    ids = [
+        t["id"]
+        for t in client.get(f"/shops/{shop['id']}/customers/{customer['id']}/transactions").json()[
+            "transactions"
+        ]
+    ]
     assert ids == [keep["id"]]
 
 
@@ -317,7 +330,7 @@ def expected_running(rows):
 
 
 def test_ledger_newest_first_pages_keep_full_running_balance(client, txn_url, long_ledger):
-    running = dict(zip((r["id"] for r in long_ledger), expected_running(long_ledger)))
+    running = dict(zip((r["id"] for r in long_ledger), expected_running(long_ledger), strict=True))
 
     first = client.get(txn_url, params={"order": "newest", "limit": 10}).json()
     assert [t["item"] for t in first["transactions"]] == [f"#{i}" for i in range(24, 14, -1)]
@@ -384,10 +397,14 @@ def test_ledger_page_validation(client, txn_url, params, field):
 
 def ledger_rows(client, txn_url):
     body = client.get(txn_url, params={"order": "newest"}).json()
-    return body["customer"]["balance"], [(t["amount"], t["running_balance"]) for t in body["transactions"]]
+    return body["customer"]["balance"], [
+        (t["amount"], t["running_balance"]) for t in body["transactions"]
+    ]
 
 
-def test_editing_an_old_entry_updates_every_later_running_balance(client, shop, customer, txn_url, add_txn):
+def test_editing_an_old_entry_updates_every_later_running_balance(
+    client, shop, customer, txn_url, add_txn
+):
     now = datetime.now(UTC)
     old = add_txn(customer["id"], "credit", 500, created_at=iso(now - timedelta(days=3)))
     add_txn(customer["id"], "payment", 200, created_at=iso(now - timedelta(days=2)))
@@ -404,7 +421,9 @@ def test_editing_an_old_entry_updates_every_later_running_balance(client, shop, 
     assert ledger_rows(client, txn_url) == (-400, [(100, -400), (200, -500), (300, -300)])
 
 
-def test_deleting_an_entry_updates_balances_list_and_dashboard(client, shop, customer, txn_url, add_txn):
+def test_deleting_an_entry_updates_balances_list_and_dashboard(
+    client, shop, customer, txn_url, add_txn
+):
     now = datetime.now(UTC)
     old = add_txn(customer["id"], "credit", 500, created_at=iso(now - timedelta(days=40)))
     add_txn(customer["id"], "credit", 100, created_at=iso(now - timedelta(days=1)))

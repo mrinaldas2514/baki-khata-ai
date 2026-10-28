@@ -76,9 +76,7 @@ _BASE = _words(
 )
 # Used on their own before a multiplier: "dedh hajar" = 1500, "arai sho" = 250.
 _SOWA = ("sowa", "shoa", "showa", "soa", "soya", "shuwa", "সোয়া", "সওয়া")
-_FRACTION = _words(
-    {1.25: _SOWA, 1.5: ("dedh", "der", "derh", "দেড়"), 2.5: ("arai", "adai", "আড়াই")}
-)
+_FRACTION = _words({1.25: _SOWA, 1.5: ("dedh", "der", "derh", "দেড়"), 2.5: ("arai", "adai", "আড়াই")})
 # Modify the next number: "sare tin sho" = 350, "poune dui hajar" = 1750,
 # "sowa tin sho" = 325 ("sowa" alone before a multiplier is 1.25: "sowa sho" = 125).
 _MODIFIERS = {

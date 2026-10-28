@@ -79,7 +79,11 @@ def create_app(
             start_model_check(settings)
         yield
 
-    docs = {} if not settings.is_production else {"docs_url": None, "redoc_url": None, "openapi_url": None}
+    docs = (
+        {}
+        if not settings.is_production
+        else {"docs_url": None, "redoc_url": None, "openapi_url": None}
+    )
     app = FastAPI(title=settings.app_name, version="0.1.0", lifespan=lifespan, **docs)
     app.state.session_factory = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
     # None means "build the configured provider on first use" (see app.llm.get_llm_client).
