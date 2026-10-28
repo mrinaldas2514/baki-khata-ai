@@ -2,6 +2,52 @@
 
 export type TransactionType = 'credit' | 'payment'
 
+export interface Shop {
+  id: number
+  name: string
+  owner_name: string
+  created_at: string
+}
+
+/** The logged-in shopkeeper. */
+export interface User {
+  id: number
+  name: string
+  /** Normalized: +8801711000001 / +919876543210. */
+  phone: string | null
+  email: string | null
+  shop: Shop
+  /** False: "AI bondho" — nothing is sent to the AI provider. */
+  ai_enabled: boolean
+  consent_version: string
+  consent_at: string
+  created_at: string
+}
+
+export interface AuthResult {
+  access_token: string
+  token_type: 'bearer'
+  expires_at: string
+  user: User
+}
+
+export interface RegisterInput {
+  name: string
+  shop_name: string
+  phone: string | null
+  email: string | null
+  password: string
+  consent: boolean
+  consent_version: string
+}
+
+/** Create or edit a customer. */
+export interface CustomerInput {
+  name: string
+  phone: string | null
+  note: string | null
+}
+
 export interface Customer {
   id: number
   shop_id: number
@@ -25,8 +71,8 @@ export interface CustomerCandidate extends Customer {
 
 export type MatchStatus = 'exact' | 'fuzzy' | 'ambiguous' | 'new'
 
-export interface ParsePreview {
-  raw_text: string
+/** One entry the sentence was understood as: what, and for whom. */
+export interface EntryPreview {
   parsed: {
     customer_name: string
     amount: number
@@ -41,6 +87,12 @@ export interface ParsePreview {
     suggested_name: string
   }
   warnings: string[]
+}
+
+/** `parsed`/`match`/`warnings` are the first entry; `entries` has all of them (usually one). */
+export interface ParsePreview extends EntryPreview {
+  raw_text: string
+  entries?: EntryPreview[]
 }
 
 export interface Transaction {
@@ -81,6 +133,8 @@ export interface TransactionInput {
   amount: number
   item: string | null
   raw_text?: string | null
+  /** When it happened (ISO). Left out: now (adding) or unchanged (editing). */
+  created_at?: string
 }
 
 export interface CustomerBalanceSummary {
@@ -131,6 +185,10 @@ export interface ParseConfirm {
   item: string | null
   customer_id?: number
   new_customer?: { name: string; note?: string | null }
+}
+
+export interface ParseConfirmManyResult {
+  results: ParseConfirmResult[]
 }
 
 export interface ParseConfirmResult {

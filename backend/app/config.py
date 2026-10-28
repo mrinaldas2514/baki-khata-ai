@@ -42,11 +42,42 @@ class Settings(BaseSettings):
     # Bangladesh: 880, India: 91.
     phone_country_code: str = Field(default="880", pattern=r"^[1-9][0-9]{0,2}$")
 
+    # Signs login tokens. Must be a long random value in production; anyone who knows it can
+    # log in as any shopkeeper. Generate one with:
+    #   python -c "import secrets; print(secrets.token_urlsafe(48))"
+    # Left empty outside production, a random one is made at startup (everyone is logged out
+    # whenever the server restarts).
+    jwt_secret: SecretStr | None = None
+    # How long a login lasts. A week: a shopkeeper shouldn't type the password every morning,
+    # and a lost phone's login still ends on its own (or at once with "Logout").
+    jwt_expire_minutes: int = Field(default=7 * 24 * 60, gt=0, le=90 * 24 * 60)
+
+    # Requests allowed per client IP (login, register) or per shop (parse, transcribe).
+    rate_limit_enabled: bool = True
+    rate_limit_login_per_minute: int = Field(default=10, gt=0)
+    rate_limit_register_per_hour: int = Field(default=10, gt=0)
+    rate_limit_parse_per_minute: int = Field(default=30, gt=0)
+    rate_limit_transcribe_per_minute: int = Field(default=15, gt=0)
+
     @field_validator("groq_api_key", mode="before")
     @classmethod
     def _blank_key_is_none(cls, value: object) -> object:
         if isinstance(value, str) and not value.strip():
             return None
+        return value
+
+    @field_validator("jwt_secret", mode="before")
+    @classmethod
+    def _check_jwt_secret(cls, value: object) -> object:
+        if isinstance(value, str):
+            value = value.strip()
+            if not value:
+                return None
+            if len(value) < 32:
+                raise ValueError(
+                    "JWT_SECRET is too short (at least 32 characters). Generate one with: "
+                    'python -c "import secrets; print(secrets.token_urlsafe(48))"'
+                )
         return value
 
     @field_validator("cors_origins", mode="before")
@@ -75,6 +106,10 @@ class Settings(BaseSettings):
     @property
     def tz(self) -> ZoneInfo:
         return ZoneInfo(self.app_timezone)
+
+    @property
+    def is_production(self) -> bool:
+        return self.environment.strip().lower() in ("production", "prod")
 
 
 @lru_cache

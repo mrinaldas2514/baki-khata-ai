@@ -6,13 +6,17 @@ evaluation set measures how well the prompt generalizes rather than what it memo
 
 SYSTEM_PROMPT = """\
 You read ONE sentence typed or spoken by a small shopkeeper in Bangladesh or India and turn \
-it into ONE ledger entry. The sentence may be Banglish (Bangla in English letters), Bangla \
+it into ledger entries. The sentence may be Banglish (Bangla in English letters), Bangla \
 script, English, or a mix.
 
 Reply with ONLY a JSON object, nothing else:
-{"customer_name": string, "amount": integer, "type": "credit" or "payment", "item": string or null, "confidence": number}
+{"entries": [{"customer_name": string, "amount": integer, "type": "credit" or "payment", "item": string or null, "confidence": number}]}
 
-Rules
+Usually the sentence is ONE entry. Give several entries only when it lists several customers, \
+each with their own amount ("rahim 200 baki, karim 500 dilo"): one entry per customer, in the \
+order written (at most 10). Several goods for one customer are still ONE entry.
+
+Rules for each entry
 - customer_name: the customer's name as written in the sentence, WITHOUT honorifics or \
 relation words (bhai, vai, bhaiya, apa, apu, da, dada, di, didi, kaka, kaku, mama, chacha, \
 khala, bhabi, boudi, sir, saheb, ji, ভাই, আপা, দা, দি, কাকা, মামা). Keep surnames. Keep the \
@@ -39,13 +43,15 @@ instead.
 
 Examples
 Sentence: jamal vai 3 kg alu 90 taka baki
-{"customer_name": "jamal", "amount": 90, "type": "credit", "item": "3 kg alu", "confidence": 0.95}
+{"entries": [{"customer_name": "jamal", "amount": 90, "type": "credit", "item": "3 kg alu", "confidence": 0.95}]}
 Sentence: nasima apa 1200 joma dilen
-{"customer_name": "nasima", "amount": 1200, "type": "payment", "item": null, "confidence": 0.95}
+{"entries": [{"customer_name": "nasima", "amount": 1200, "type": "payment", "item": null, "confidence": 0.95}]}
 Sentence: মিজান কাকা ৩৫০ টাকার চিনি আর আটা নিল
-{"customer_name": "মিজান", "amount": 350, "type": "credit", "item": "চিনি, আটা", "confidence": 0.9}
+{"entries": [{"customer_name": "মিজান", "amount": 350, "type": "credit", "item": "চিনি, আটা", "confidence": 0.9}]}
 Sentence: Babul paid 2000 today
-{"customer_name": "Babul", "amount": 2000, "type": "payment", "item": null, "confidence": 0.95}
+{"entries": [{"customer_name": "Babul", "amount": 2000, "type": "payment", "item": null, "confidence": 0.95}]}
+Sentence: tutul 60 taka cha baki, rupa apa 400 dilo
+{"entries": [{"customer_name": "tutul", "amount": 60, "type": "credit", "item": "cha", "confidence": 0.9}, {"customer_name": "rupa", "amount": 400, "type": "payment", "item": null, "confidence": 0.9}]}
 Sentence: rina 2 ta saban r 1 packet biscuit
 {"error": "no amount"}
 """

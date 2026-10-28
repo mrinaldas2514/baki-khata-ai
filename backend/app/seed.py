@@ -1,27 +1,35 @@
-"""Create a demo shop with customers and transactions, so the app has something to show.
+"""Create a demo shopkeeper login with a shop full of customers and transactions.
 
     cd backend
-    python -m app.seed            # creates "Demo Dokan" if it doesn't exist yet
-    python -m app.seed --reset    # deletes the demo shop and creates it again
+    alembic upgrade head          # once: create the database tables
+    python -m app.seed            # creates the demo login and "Demo Dokan" if they don't exist
+    python -m app.seed --reset    # deletes the demo shop (and its data) and creates it again
 
-Prints the shop id; put it in frontend/.env as VITE_SHOP_ID (it's 1 on a fresh database).
+Prints the demo login (phone and password) to use on the app's login screen.
 """
 
 import argparse
+import sys
 from datetime import timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.database import build_engine, create_tables
-from app.models import Shop, TransactionType
+from app.database import DatabaseNotMigratedError, build_engine, check_schema
+from app.models import Shop, TransactionType, User
+from app.privacy import CONSENT_VERSION
 from app.schemas import CustomerCreate, ShopCreate, TransactionCreate
+from app.security import hash_password
 from app.services import customers as customer_service
 from app.services import transactions as transaction_service
+from app.services.phones import normalize_mobile
 from app.time_utils import utc_now
 
 DEMO_SHOP = ShopCreate(name="Demo Dokan", owner_name="Karim")
+# The demo login printed by the script and shown in the README. Only for trying the app.
+DEMO_PHONE = "01700000000"
+DEMO_PASSWORD = "demo1234"
 
 # (name, note, phone). The two Rahims show how the app asks "which Rahim?".
 CUSTOMERS = [
@@ -55,17 +63,33 @@ TRANSACTIONS = [
 ]
 
 
+def _demo_user(db: Session) -> User | None:
+    return db.scalar(select(User).where(User.phone == normalize_mobile(DEMO_PHONE)))
+
+
 def seed(db: Session, reset: bool = False) -> Shop:
-    existing = db.scalar(select(Shop).where(Shop.name == DEMO_SHOP.name).order_by(Shop.id))
+    existing = _demo_user(db)
     if existing is not None and not reset:
-        return existing
+        return db.get(Shop, existing.shop_id)
     if existing is not None:
-        db.delete(existing)  # customers and transactions go with it (ON DELETE CASCADE)
+        # Its user, customers and transactions go with it (ON DELETE CASCADE).
+        db.delete(db.get(Shop, existing.shop_id))
         db.commit()
+        db.expunge_all()  # the database deleted the user too; forget the stale objects
 
     shop = Shop(**DEMO_SHOP.model_dump())
     db.add(shop)
     db.flush()
+    db.add(
+        User(
+            shop_id=shop.id,
+            name=DEMO_SHOP.owner_name,
+            phone=normalize_mobile(DEMO_PHONE),
+            password_hash=hash_password(DEMO_PASSWORD),
+            consent_version=CONSENT_VERSION,
+            consent_at=utc_now(),
+        )
+    )
     customers = [
         customer_service.add_customer(db, shop.id, CustomerCreate(name=n, note=note, phone=phone))
         for n, note, phone in CUSTOMERS
@@ -94,15 +118,20 @@ def main() -> None:
 
     settings = get_settings()
     engine = build_engine(settings.database_url)
-    create_tables(engine)
+    try:
+        check_schema(engine)
+    except DatabaseNotMigratedError as exc:
+        sys.exit(str(exc))
     with Session(engine, expire_on_commit=False) as db:
-        before = db.scalar(select(Shop.id).where(Shop.name == DEMO_SHOP.name))
+        before = _demo_user(db)
         shop = seed(db, reset=args.reset)
     if before is not None and not args.reset:
-        print(f"Demo shop already exists (id {shop.id}). Use --reset to recreate it.")
+        print(f"The demo shop '{shop.name}' already exists. Use --reset to recreate it.")
     else:
-        print(f"Created demo shop '{shop.name}' with id {shop.id}.")
-    print(f"Set VITE_SHOP_ID={shop.id} in frontend/.env")
+        print(f"Created the demo shop '{shop.name}' with its customers and hisab.")
+    print("Log in to the app with:")
+    print(f"  Phone:    {DEMO_PHONE}")
+    print(f"  Password: {DEMO_PASSWORD}")
 
 
 if __name__ == "__main__":

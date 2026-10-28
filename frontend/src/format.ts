@@ -65,3 +65,27 @@ export function formatShortDate(day: string): string {
   const [year, month, date] = day.split('-').map(Number)
   return new Date(year, month - 1, date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
 }
+
+const pad = (n: number) => String(n).padStart(2, '0')
+
+/** A moment as this phone's local date for <input type="date">: "2026-10-27". */
+export function toDateInput(when: Date | string): string {
+  const date = new Date(when)
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
+/**
+ * The entry's new time when the shopkeeper picks a date: that day, at the time of day it had
+ * (or now's time for a new entry), never later than now. Null if the date isn't a real day or
+ * is in the future.
+ */
+export function moveToDate(day: string, timeOf: Date | string, now: Date = new Date()): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day)
+  if (!match) return null
+  const [year, month, date] = [Number(match[1]), Number(match[2]) - 1, Number(match[3])]
+  const time = new Date(timeOf)
+  const moved = new Date(year, month, date, time.getHours(), time.getMinutes(), time.getSeconds())
+  if (moved.getFullYear() !== year || moved.getMonth() !== month || moved.getDate() !== date) return null
+  if (day > toDateInput(now)) return null
+  return moved > now ? now : moved
+}

@@ -3,6 +3,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.orm import Session
 
+from app.auth import require_shop_owner
 from app.database import get_db
 from app.schemas import (
     CustomerLedger,
@@ -13,7 +14,9 @@ from app.schemas import (
 )
 from app.services import transactions as service
 
-router = APIRouter(prefix="/shops/{shop_id}", tags=["transactions"])
+router = APIRouter(
+    prefix="/shops/{shop_id}", tags=["transactions"], dependencies=[Depends(require_shop_owner)]
+)
 DB = Annotated[Session, Depends(get_db)]
 
 

@@ -9,6 +9,108 @@
 const banglish = {
   appTitle: 'Baki Khata',
 
+  // Login and register
+  auth: {
+    loginTitle: 'Login korun',
+    loginSubtitle: 'Apnar dokan-er khata khulun',
+    loginLabel: 'Mobile number ba email',
+    loginPlaceholder: 'Jemon: 01711-000001',
+    password: 'Password',
+    showPassword: 'Password dekhun',
+    show: 'Dekhun',
+    hide: 'Lukan',
+    loginButton: 'Login korun',
+    loggingIn: 'Login hocche...',
+    noAccount: 'Account nei?',
+    toRegister: 'Notun account khulun',
+    haveAccount: 'Age thekei account ache?',
+    toLogin: 'Login korun',
+    registerTitle: 'Notun account khulun',
+    registerSubtitle: 'Ekbar likhe nin. Tarpor shudhu mobile number ar password diye login.',
+    yourName: 'Apnar naam',
+    shopName: 'Dokan-er naam',
+    phone: 'Mobile number',
+    phonePlaceholder: '01711-000001 ba +91 98765 43210',
+    phoneHint: 'Ei number diye login korben.',
+    email: 'Email (na thakle khali rakhun)',
+    newPassword: 'Password (kom-pokkhe 8 ta okkhor)',
+    registerButton: 'Account khulun',
+    registering: 'Account khola hocche...',
+    wrongLogin: 'Mobile number/email ba password thik nei. Dekhe abar likhun.',
+    loginRequired: 'Mobile number ba email likhun',
+    passwordRequired: 'Password likhun',
+    sessionExpired: 'Login-er shomoy shesh hoye geche. Abar login korun.',
+    loggedOut: 'Logout hoyeche. Abar dekha hobe!',
+    accountDeleted: 'Account ar sob hisab muche fela hoyeche.',
+    accountExists: 'Ei number ba email diye age thekei account ache. Login korun.',
+    nameRequired: 'Apnar naam likhun',
+    shopRequired: 'Dokan-er naam likhun',
+    phoneRequired: 'Mobile number likhun',
+    passwordShort: 'Password kom-pokkhe 8 ta okkhor-er hote hobe',
+    emailInvalid: 'Email thik nei (jemon: karim@gmail.com)',
+    consentRequired: 'Age niche pore tick din',
+  },
+
+  // The privacy note on registration (version: CONSENT_VERSION in config.ts)
+  consent: {
+    title: 'Apnar hisab, apnar odhikar',
+    points: [
+      'Apni je line likhen ba bolen, sheta bujhte AI service-e (Groq) pathano hoy.',
+      'Browser nije voice bujhte na parle, apnar voice lekhar jonno server-e (Groq) pathano hoy.',
+      'Apnar tottho kauke bikri kora hoy na, ar loan ba credit-er jonno beboher kora hoy na.',
+      'Settings theke jekono shomoy AI bondho korte, sob hisab download korte ba account muche dite paren.',
+    ],
+    agree: 'Ami pore bujhechi ar raji achi',
+  },
+
+  // Settings
+  settings: {
+    open: 'Settings',
+    title: 'Settings',
+    account: 'Apnar account',
+    aiTitle: 'AI bondho rakhun',
+    aiOnHint: 'Ekhon AI chalu: apnar line AI service-e jay, beshi thik bujhe.',
+    aiOffHint:
+      'AI bondho: kichui AI service-e jay na. Shohoj niyome bujhbe, ar na bujhle nije likhben. Server diye voice-o bondho.',
+    aiSaving: 'Bodlano hocche...',
+    aiFailed: 'Bodlano jayni. Abar chesta korun.',
+    aiOffBanner: 'AI bondho ache: shohoj niyome bujhchi. Bhul hole thik kore din.',
+    exportTitle: 'Data export (CSV)',
+    exportHint: 'Sob customer ar sob hisab ekta file-e. Excel-e khola jay.',
+    exportButton: 'Download korun',
+    exporting: 'File toiri hocche...',
+    exportFailed: 'Download hoyni. Abar chesta korun.',
+    logout: 'Logout',
+    loggingOut: 'Logout hocche...',
+    deleteTitle: 'Account muchhe din',
+    deleteHint:
+      'Account, dokan, sob customer ar sob hisab chirodiner jonno muche jabe. Age CSV download kore rakhte paren.',
+    deleteButton: 'Account muchhe din',
+    deleteConfirmTitle: 'Sob kichu muche felben?',
+    deleteConfirmBody:
+      'Ei account, dokan-er sob customer ar sob hisab muche jabe. Ar fire pawa jabe na. Nishchit hole password likhun.',
+    deleteConfirmYes: 'Hya, sob muche din',
+    deleteConfirmNo: 'Na, rakhun',
+    deleting: 'Muchchi...',
+    wrongPassword: 'Password thik nei.',
+    deleteFailed: 'Muchte pareni. Abar chesta korun.',
+  },
+
+  // Add / edit a customer
+  customerForm: {
+    addTitle: 'Notun customer',
+    editTitle: 'Customer-er tottho',
+    addButton: '+ Notun customer',
+    editButton: 'Tottho bodlan',
+    name: 'Naam',
+    phone: 'Mobile number (na thakle khali rakhun)',
+    phonePlaceholder: '01711-000001',
+    note: 'Elaka / note (jemon: Bazar road)',
+    phoneInvalid: 'Bangladesh (01XXXXXXXXX ba +880) ba India (+91) mobile number likhun',
+    saved: 'Customer-er tottho save hoyeche',
+    created: (name: string) => `${name} jog hoyeche`,
+  },
+
   // Smart entry
   entryLabel: 'Ki hisab likhben?',
   entryPlaceholder: 'Jemon: rahim bhai 2 kg chal 120 taka baki',
@@ -78,12 +180,35 @@ const banglish = {
   typePaymentHint: 'Customer taka dilo',
   item: 'Jinis (na thakle khali rakhun)',
   itemShort: 'Jinis',
+  date: 'Kobe?',
+  dateInvalid: 'Shothik tarikh din (agamir tarikh hobe na)',
 
   // Edit / manual entry
   editTitle: 'Thik kore din',
   manualTitle: 'Nije likhun',
   amountInvalid: 'Shothik taka likhun (1 theke 1 koti)',
   nameRequired: 'Customer-er naam likhun',
+
+  // Several customers in one sentence
+  multi: {
+    title: (count: number) => `${count} ta hisab bujhechi`,
+    hint: 'Protita dekhe nin. Bhul thakle "Thik kore din", dorkar na hole "Bad din".',
+    entryLabel: (n: number, name: string) => `Hisab ${n}: ${name}`,
+    editTitle: (n: number) => `Hisab ${n} thik kore din`,
+    remove: 'Bad din',
+    saveAll: (count: number) => `Sob save korun (${count} ta)`,
+    pickAll: 'Age protita hisab-er customer bachun',
+    savedTitle: (count: number) => `${count} ta hisab save hoyeche!`,
+  },
+
+  // Undo right after saving
+  undo: {
+    button: (seconds: number) => `Bhul hoyeche? Undo (${seconds})`,
+    label: 'Bhul hoyeche? Undo',
+    undoing: 'Undo hocche...',
+    done: 'Undo hoyeche. Line-ta abar box-e ache: thik kore abar "Hisab korun" chapun.',
+    failed: 'Undo hoyni. Customer-er khata theke hisab-ta muche din.',
+  },
 
   // After saving
   savedTitle: 'Save hoyeche!',
@@ -167,7 +292,10 @@ const banglish = {
   reminderFailed: 'Message toiri hoyni. Abar chesta korun.',
   reminderLabel: 'Message (dorkar hole bodlate paren)',
   reminderHint: 'WhatsApp khulbe, message lekha thakbe. Apni dekhe "Send" chapben.',
-  reminderNoPhone: 'Ei customer-er phone number nei. Message copy kore nije pathan.',
+  reminderNoPhone:
+    'Ei customer-er phone number nei. Number dile WhatsApp-e pathano jabe, na hole message copy kore nije pathan.',
+  reminderAddPhone: 'Phone number save korun',
+  reminderPhoneSaved: 'Phone number save hoyeche',
   openWhatsApp: 'WhatsApp-e khulun',
   copyMessage: 'Message copy korun',
   copied: 'Copy hoyeche!',
@@ -201,11 +329,13 @@ const banglish = {
     aiUnavailable: 'AI ekhon kaj korche na. Niche nije likhe din.',
     notTransaction: 'Naam ba taka khuje paini. Niche nije likhe din.',
     lowConfidence: 'AI puro nishchit na. Ekbar dekhe thik kore din.',
-    shopNotFound: 'Dokan pawa jayni. Backend-e demo dokan banan (README dekhun).',
+    shopNotFound: 'Dokan pawa jayni. Logout kore abar login korun.',
     duplicateCustomer: 'Ei naame customer age thekei ache. Upore theke bachun, ba alada note din.',
     invalidData: 'Kichu tottho thik nei. Dekhe abar save korun.',
     saveFailed: 'Save hoyni. Abar chesta korun.',
     unknown: 'Kichu ekta somossa hoyeche. Abar chesta korun.',
+    rateLimited: (seconds: number) =>
+      `Onek bar chesta hoyeche. ${seconds < 90 ? `${seconds} second` : `${Math.ceil(seconds / 60)} minute`} por abar chesta korun.`,
     // Voice input
     micPermission: 'Mic chalu korar onumoti nei. Browser-er setting-e ei site-ke mic-er onumoti din, ba likhe din.',
     micInsecure: 'Ei address-e browser mic chalu korte dey na (https lagbe). Ekhon likhe din.',
@@ -215,6 +345,7 @@ const banglish = {
     micLanguage: 'Ei browser ei bhasha bujhe na. Voice setting-e onno bhasha bachun.',
     micServerOff: 'Server-e voice chalu nei. Browser diye bolun, ba likhe din.',
     micTooLong: 'Onek lomba hoye geche. Chhoto kore ek line-e abar bolun.',
+    micTooMany: 'Onek bar bola hoyeche. Ek minute por abar bolun, ba ekhon likhe din.',
     micFailed: 'Voice bujhte pareni. Abar bolun, ba likhe din.',
   },
 }

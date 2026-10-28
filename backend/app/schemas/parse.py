@@ -46,13 +46,24 @@ class CustomerMatchResult(BaseModel):
     suggested_name: str = Field(description="Cleaned name to use if this is a new customer")
 
 
-class ParsePreview(BaseModel):
-    """Nothing is saved yet. Show this to the shopkeeper, then call /parse/confirm."""
+class EntryPreview(BaseModel):
+    """One entry the sentence was understood as."""
 
-    raw_text: str
     parsed: ParsedTransaction
     match: CustomerMatchResult
     warnings: list[str] = Field(description="Things the shopkeeper should double-check")
+
+
+class ParsePreview(EntryPreview):
+    """Nothing is saved yet. Show this to the shopkeeper, then call /parse/confirm.
+
+    `parsed`, `match` and `warnings` are the first entry. A sentence about several customers
+    ("rahim 200 baki, karim 500 dilo") has one item per customer in `entries` (save them with
+    /parse/confirm-many); a usual sentence has exactly one, the same as the top-level fields.
+    """
+
+    raw_text: str
+    entries: list[EntryPreview] = Field(description="Every entry, in the order written")
 
 
 class ParseConfirm(BaseModel):
@@ -82,3 +93,18 @@ class ParseConfirmResult(BaseModel):
     transaction: TransactionWithBalance
     customer: CustomerRead = Field(description="The customer, with the balance after this entry")
     customer_created: bool
+
+
+MAX_ENTRIES = 10
+
+
+class ParseConfirmMany(BaseModel):
+    """Several confirmed entries from one sentence, saved together (all or nothing)."""
+
+    entries: list[ParseConfirm] = Field(min_length=1, max_length=MAX_ENTRIES)
+
+
+class ParseConfirmManyResult(BaseModel):
+    results: list[ParseConfirmResult] = Field(
+        description="In the same order. Balances are each customer's balance after all of them."
+    )

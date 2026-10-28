@@ -119,7 +119,8 @@ def _polish(llm: LLMClient, template: str, name: str, amount: int) -> str | None
         raw = llm.complete_json(messages)
         polished = _PolishedMessage.model_validate(json.loads(raw)).message.strip()
     except (LLMProviderError, ValueError, ValidationError, TypeError) as exc:
-        logger.warning("Reminder polish failed, using the template: %s", exc)
+        # Not the exception text: a validation error repeats the message (name, amount).
+        logger.warning("Reminder polish failed, using the template: %s", type(exc).__name__)
         return None
     if name.lower() not in polished.lower():
         logger.warning("Reminder polish dropped the customer's name, using the template")

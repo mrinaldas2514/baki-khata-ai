@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.config import Settings
 from app.main import create_app
 from app.models import Customer, Shop, Transaction
-from app.seed import CUSTOMERS, TRANSACTIONS, seed
+from app.seed import CUSTOMERS, DEMO_PASSWORD, DEMO_PHONE, TRANSACTIONS, seed
 
 
 def test_cors_allows_the_configured_frontend_origin(client):
@@ -17,6 +17,14 @@ def test_cors_allows_the_configured_frontend_origin(client):
     )
     assert response.status_code == 200
     assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
+
+
+def test_cors_lets_the_app_read_the_csv_name_and_retry_after(client, shop):
+    response = client.get(
+        f"/shops/{shop['id']}/export.csv", headers={"Origin": "http://localhost:5173"}
+    )
+    exposed = response.headers["access-control-expose-headers"]
+    assert "Content-Disposition" in exposed and "Retry-After" in exposed
 
 
 def test_cors_rejects_other_origins(client):
@@ -60,6 +68,9 @@ def test_seeded_shop_works_with_the_demo_parser(engine, monkeypatch):
         "app.llm.get_settings", lambda: Settings(_env_file=None, llm_provider="fake")
     )
     with TestClient(create_app(engine)) as client:
+        login = client.post("/auth/login", json={"login": DEMO_PHONE, "password": DEMO_PASSWORD})
+        assert login.json()["user"]["shop"]["id"] == shop_id
+        client.headers["Authorization"] = f"Bearer {login.json()['access_token']}"
         rahim = client.post(f"/shops/{shop_id}/parse", json={"text": "rahim 100 taka baki"})
         salma = client.post(f"/shops/{shop_id}/parse", json={"text": "salma apa 200 dilo"})
         new = client.post(f"/shops/{shop_id}/parse", json={"text": "Tanvir 90 taka baki"})

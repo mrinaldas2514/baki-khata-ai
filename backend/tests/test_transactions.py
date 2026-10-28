@@ -110,8 +110,8 @@ def test_create_for_missing_customer(client, shop):
     assert response.status_code == 404
 
 
-def test_create_for_customer_of_another_shop(client, customer):
-    other = client.post("/shops", json={"name": "Other", "owner_name": "X"}).json()
+def test_create_for_customer_of_another_shop(client, customer, other_shop):
+    other = other_shop
     response = client.post(
         f"/shops/{other['id']}/customers/{customer['id']}/transactions",
         json={"type": "credit", "amount": 10},
@@ -241,9 +241,9 @@ def test_delete_transaction(client, shop, customer, add_txn):
     assert ids == [keep["id"]]
 
 
-def test_cannot_touch_transaction_through_another_shop(client, customer, add_txn):
+def test_cannot_touch_transaction_through_another_shop(client, customer, add_txn, other_shop):
     txn = add_txn(customer["id"], "credit", 100)
-    other = client.post("/shops", json={"name": "Other", "owner_name": "X"}).json()
+    other = other_shop
     url = f"/shops/{other['id']}/transactions/{txn['id']}"
     assert client.get(url).status_code == 404
     assert client.patch(url, json={"amount": 1}).status_code == 404
@@ -285,10 +285,11 @@ def test_recent_transactions_limit(client, shop, customer, add_txn):
     assert client.get(url, params={"limit": 101}).status_code == 422
 
 
-def test_recent_transactions_only_this_shop(client, shop, customer, add_txn):
+def test_recent_transactions_only_this_shop(client, shop, customer, add_txn, other_shop):
     add_txn(customer["id"], "credit", 100)
-    other = client.post("/shops", json={"name": "Other", "owner_name": "X"}).json()
-    assert client.get(f"/shops/{other['id']}/transactions").json() == []
+    other = other_shop
+    assert client.get(f"/shops/{other['id']}/transactions").status_code == 404
+    assert client.get(f"/shops/{other['id']}/transactions", headers=other["headers"]).json() == []
     assert client.get("/shops/999/transactions").status_code == 404
 
 
@@ -420,3 +421,36 @@ def test_deleting_an_entry_updates_balances_list_and_dashboard(client, shop, cus
     assert dashboard["total_outstanding"] == 100
     assert dashboard["overdue_customers"] == []
     assert client.get(txn_url).json()["total"] == 1
+
+
+def test_changing_a_date_reorders_the_khata_and_recalculates_running_balances(
+    client, shop, customer, txn_url, add_txn
+):
+    now = datetime.now(UTC)
+    credit = add_txn(customer["id"], "credit", 500, created_at=iso(now - timedelta(days=10)))
+    payment = add_txn(customer["id"], "payment", 200, created_at=iso(now - timedelta(days=5)))
+    late = add_txn(customer["id"], "credit", 100, created_at=iso(now - timedelta(days=1)))
+
+    def ledger():
+        rows = client.get(txn_url).json()["transactions"]
+        return [(r["id"], r["running_balance"]) for r in rows]
+
+    assert ledger() == [(credit["id"], 500), (payment["id"], 300), (late["id"], 400)]
+
+    # The payment really happened before the first credit: Agrim first, then baki.
+    response = client.patch(
+        f"/shops/{shop['id']}/transactions/{payment['id']}",
+        json={"created_at": iso(now - timedelta(days=20))},
+    )
+    assert response.status_code == 200
+    assert response.json()["customer_balance"] == 400  # the total doesn't change
+    assert ledger() == [(payment["id"], -200), (credit["id"], 300), (late["id"], 400)]
+
+    # A date in the future is refused and nothing changes.
+    response = client.patch(
+        f"/shops/{shop['id']}/transactions/{late['id']}",
+        json={"created_at": iso(now + timedelta(days=1))},
+    )
+    assert response.status_code == 422
+    assert error_messages(response)["created_at"] == "Date cannot be in the future"
+    assert ledger() == [(payment["id"], -200), (credit["id"], 300), (late["id"], 400)]

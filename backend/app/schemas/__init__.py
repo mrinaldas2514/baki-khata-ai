@@ -1,9 +1,12 @@
-from app.schemas.customer import CustomerCreate, CustomerListItem, CustomerRead
+from app.schemas.customer import CustomerCreate, CustomerListItem, CustomerRead, CustomerUpdate
 from app.schemas.dashboard import CustomerBalanceSummary, Dashboard, DaySummary, OverdueCustomer
 from app.schemas.parse import (
     CustomerCandidate,
     CustomerMatchResult,
+    EntryPreview,
     ParseConfirm,
+    ParseConfirmMany,
+    ParseConfirmManyResult,
     ParseConfirmResult,
     ParsedTransaction,
     ParsePreview,
@@ -28,11 +31,15 @@ __all__ = [
     "CustomerListItem",
     "CustomerMatchResult",
     "CustomerRead",
+    "CustomerUpdate",
     "Dashboard",
     "DaySummary",
+    "EntryPreview",
     "LedgerEntry",
     "OverdueCustomer",
     "ParseConfirm",
+    "ParseConfirmMany",
+    "ParseConfirmManyResult",
     "ParseConfirmResult",
     "ParsedTransaction",
     "ParsePreview",

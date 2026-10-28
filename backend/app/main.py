@@ -10,11 +10,26 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import Engine
 from sqlalchemy.orm import sessionmaker
 
+from app.auth import NotAuthenticatedError
 from app.config import get_settings
-from app.database import build_engine, create_tables
+from app.database import build_engine, check_schema
 from app.groq_models import start_model_check
 from app.llm import LLMClient, LLMNotConfiguredError, LLMProviderError
-from app.routers import customers, dashboard, parse, shops, transactions, transcribe
+from app.logging_privacy import install_access_log_filter
+from app.rate_limit import RateLimitedError, build_rate_limiter
+from app.routers import (
+    auth,
+    customers,
+    dashboard,
+    export,
+    parse,
+    shops,
+    transactions,
+    transcribe,
+)
+from app.routers.transcribe import AIDisabledError
+from app.security import resolve_jwt_secret
+from app.services.auth import WrongPasswordError
 from app.services.exceptions import ConflictError, NotFoundError
 from app.services.parsing import LLMOutputError, NotATransactionError
 from app.services.transcription import AudioRejectedError
@@ -27,15 +42,24 @@ def create_app(
     engine: Engine | None = None,
     llm_client: LLMClient | None = None,
     stt_client: SpeechToTextClient | None = None,
+    *,
+    check_migrations: bool | None = None,
 ) -> FastAPI:
+    """The API. Tests pass their own engine (tables made with create_all) and fake AI clients.
+
+    `check_migrations` (default: only for the database from DATABASE_URL) stops startup with a
+    clear message when the database needs `alembic upgrade head`.
+    """
     settings = get_settings()
+    if check_migrations is None:
+        check_migrations = engine is None
     if engine is None:
         engine = build_engine(settings.database_url, echo=settings.sql_echo)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        # Fine for now; switch to Alembic migrations once the schema starts changing.
-        create_tables(engine)
+        if check_migrations:
+            check_schema(engine)
         if llm_client is None or stt_client is None:
             # Logs a clear error if Groq has retired (or never had) a configured model.
             start_model_check(settings)
@@ -46,6 +70,10 @@ def create_app(
     # None means "build the configured provider on first use" (see app.llm.get_llm_client).
     app.state.llm_client = llm_client
     app.state.stt_client = stt_client
+    app.state.jwt_secret = resolve_jwt_secret(settings)
+    app.state.jwt_expire_minutes = settings.jwt_expire_minutes
+    app.state.rate_limiter = build_rate_limiter(settings)
+    install_access_log_filter()
 
     # Lets the frontend (a different origin in development) call the API from the browser.
     app.add_middleware(
@@ -53,14 +81,18 @@ def create_app(
         allow_origins=settings.cors_origins,
         allow_methods=["*"],
         allow_headers=["*"],
+        # Readable by the app: the CSV's file name, and how long to wait after a 429.
+        expose_headers=["Content-Disposition", "Retry-After"],
     )
 
+    app.include_router(auth.router)
     app.include_router(shops.router)
     app.include_router(customers.router)
     app.include_router(transactions.router)
     app.include_router(dashboard.router)
     app.include_router(parse.router)
     app.include_router(transcribe.router)
+    app.include_router(export.router)
 
     @app.get("/health", tags=["health"])
     def health():
@@ -78,6 +110,34 @@ def _register_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(ConflictError)
     async def _conflict(_request: Request, exc: ConflictError):
         return JSONResponse(status_code=status.HTTP_409_CONFLICT, content={"detail": str(exc)})
+
+    @app.exception_handler(NotAuthenticatedError)
+    async def _not_authenticated(_request: Request, exc: NotAuthenticatedError):
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"detail": str(exc)},
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    @app.exception_handler(WrongPasswordError)
+    async def _wrong_password(_request: Request, exc: WrongPasswordError):
+        # 403, not 401: the login itself is fine, so the app must not log out.
+        return JSONResponse(status_code=status.HTTP_403_FORBIDDEN, content={"detail": str(exc)})
+
+    @app.exception_handler(AIDisabledError)
+    async def _ai_disabled(_request: Request, exc: AIDisabledError):
+        return JSONResponse(status_code=status.HTTP_403_FORBIDDEN, content={"detail": str(exc)})
+
+    @app.exception_handler(RateLimitedError)
+    async def _rate_limited(_request: Request, exc: RateLimitedError):
+        return JSONResponse(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            content={
+                "detail": f"Onek bar chesta hoyeche. {exc.retry_after} second por abar chesta korun.",
+                "retry_after": exc.retry_after,
+            },
+            headers={"Retry-After": str(exc.retry_after)},
+        )
 
     @app.exception_handler(NotATransactionError)
     async def _not_a_transaction(_request: Request, exc: NotATransactionError):

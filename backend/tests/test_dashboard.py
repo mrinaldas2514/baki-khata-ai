@@ -92,7 +92,7 @@ def test_overdue_customers(client, shop, make_customer, add_txn):
         ("Older debt", 50, 60),
         ("Old debt", 200, 45),
     ]
-    assert overdue[1]["phone"] == "01700000000"
+    assert overdue[1]["phone"] == "+8801700000000"  # stored normalized
     assert overdue[1]["owed_since"]
 
 
@@ -111,16 +111,21 @@ def test_overdue_days_validation(client, shop):
     assert response.json()["errors"][0]["field"] == "overdue_days"
 
 
-def test_dashboard_ignores_other_shops(client, shop, make_customer, add_txn):
-    other = client.post("/shops", json={"name": "Other", "owner_name": "X"}).json()
-    c = client.post(f"/shops/{other['id']}/customers", json={"name": "Outsider"}).json()
+def test_dashboard_ignores_other_shops(client, shop, make_customer, add_txn, other_shop):
+    other = other_shop
+    as_other = {"headers": other["headers"]}
+    c = client.post(
+        f"/shops/{other['id']}/customers", json={"name": "Outsider"}, **as_other
+    ).json()
     client.post(
         f"/shops/{other['id']}/customers/{c['id']}/transactions",
         json={"type": "credit", "amount": 500, "created_at": ago(days=50)},
+        **as_other,
     )
     client.post(
         f"/shops/{other['id']}/customers/{c['id']}/transactions",
         json={"type": "payment", "amount": 100},
+        **as_other,
     )
     body = dashboard(client, shop)
     assert body["total_outstanding"] == 0

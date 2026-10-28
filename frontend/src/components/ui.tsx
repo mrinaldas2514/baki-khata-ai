@@ -1,4 +1,4 @@
-import type { AnchorHTMLAttributes, ComponentProps, ReactNode } from 'react'
+import { type AnchorHTMLAttributes, type ComponentProps, type ReactNode, useState } from 'react'
 import type { TransactionType } from '../api/types'
 import { strings } from '../strings'
 import { TYPE_STYLES } from '../typeStyles'
@@ -44,11 +44,18 @@ export function ButtonLink({
   )
 }
 
-export function Alert({ tone = 'error', children }: { tone?: 'error' | 'warning'; children: ReactNode }) {
-  const style =
-    tone === 'error' ? 'border-red-300 bg-red-50 text-red-900' : 'border-amber-300 bg-amber-50 text-amber-950'
+const ALERT_TONES = {
+  error: 'border-red-300 bg-red-50 text-red-900',
+  warning: 'border-amber-300 bg-amber-50 text-amber-950',
+  info: 'border-emerald-300 bg-emerald-50 text-emerald-950',
+}
+
+export function Alert({ tone = 'error', children }: { tone?: keyof typeof ALERT_TONES; children: ReactNode }) {
   return (
-    <div role="alert" className={`rounded-2xl border-2 px-4 py-3 text-lg ${style}`}>
+    <div
+      role={tone === 'info' ? 'status' : 'alert'}
+      className={`rounded-2xl border-2 px-4 py-3 text-lg ${ALERT_TONES[tone]}`}
+    >
       {children}
     </div>
   )
@@ -65,6 +72,85 @@ export function TypeBadge({ type }: { type: TransactionType }) {
 
 export const inputClass =
   'min-h-14 w-full rounded-2xl border-2 border-stone-300 bg-white px-4 text-xl text-stone-900 placeholder:text-stone-400 focus:border-emerald-600 focus:outline-none aria-invalid:border-red-500'
+
+/** A labelled input with its problem underneath: name, phone, note... */
+export function Field({
+  id,
+  label,
+  hint,
+  problem,
+  ...input
+}: ComponentProps<'input'> & { id: string; label: string; hint?: string; problem?: string | null }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <label htmlFor={id} className="text-xl font-semibold text-stone-900">
+        {label}
+      </label>
+      <input
+        id={id}
+        aria-invalid={Boolean(problem)}
+        aria-describedby={problem ? `${id}-problem` : hint ? `${id}-hint` : undefined}
+        className={inputClass}
+        {...input}
+      />
+      {hint && !problem && (
+        <p id={`${id}-hint`} className="text-base text-stone-600">
+          {hint}
+        </p>
+      )}
+      {problem && (
+        <p id={`${id}-problem`} className="text-lg text-red-700">
+          {problem}
+        </p>
+      )}
+    </div>
+  )
+}
+
+/** A password box with a big "show / hide" button, so it can be checked before sending. */
+export function PasswordInput({
+  id,
+  label,
+  problem,
+  ...input
+}: ComponentProps<'input'> & { id: string; label: string; problem?: string | null }) {
+  const [visible, setVisible] = useState(false)
+  return (
+    <div className="flex flex-col gap-2">
+      <label htmlFor={id} className="text-xl font-semibold text-stone-900">
+        {label}
+      </label>
+      <div className="relative">
+        <input
+          id={id}
+          type={visible ? 'text' : 'password'}
+          aria-invalid={Boolean(problem)}
+          aria-describedby={problem ? `${id}-problem` : undefined}
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          className={`${inputClass} pr-24`}
+          {...input}
+        />
+        <button
+          type="button"
+          onClick={() => setVisible((v) => !v)}
+          aria-pressed={visible}
+          aria-controls={id}
+          aria-label={strings.auth.showPassword}
+          className="absolute top-1/2 right-1 min-h-12 min-w-20 -translate-y-1/2 rounded-xl px-3 text-lg font-semibold text-emerald-800 active:bg-stone-100"
+        >
+          {visible ? strings.auth.hide : strings.auth.show}
+        </button>
+      </div>
+      {problem && (
+        <p id={`${id}-problem`} className="text-lg text-red-700">
+          {problem}
+        </p>
+      )}
+    </div>
+  )
+}
 
 /** A big taka amount box: "৳" in front, numeric keyboard on phones. */
 export function AmountInput({
