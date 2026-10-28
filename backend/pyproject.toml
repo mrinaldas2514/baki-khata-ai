@@ -2,3 +2,14 @@
 pythonpath = ["."]
 testpaths = ["tests"]
 addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["eval/results"]
+
+[tool.ruff.lint]
+# pycodestyle, pyflakes, warnings, import order, bugbear, pyupgrade.
+select = ["E", "F", "W", "I", "B", "UP"]
+# Long lines are left to the formatter; the prompt and test tables keep their wording.
+ignore = ["E501"]

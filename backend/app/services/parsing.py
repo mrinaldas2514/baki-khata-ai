@@ -8,6 +8,7 @@ Nothing is written to the database until `confirm` (or `confirm_many`) is called
 
 import json
 import logging
+from collections.abc import Callable
 
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
@@ -29,6 +30,7 @@ from app.schemas import (
 )
 from app.schemas.parse import MAX_ENTRIES
 from app.services import customers as customer_service
+from app.services import entry_speed
 from app.services import transactions as transaction_service
 from app.services.name_matching import MatchStatus, clean_name, match_name
 from app.services.number_words import normalize_numbers, numbers_in
@@ -170,18 +172,33 @@ def preview(db: Session, llm: LLMClient, shop_id: int, raw_text: str) -> ParsePr
         match=first.match,
         warnings=first.warnings,
         entries=entries,
+        parser=llm.parser,
+        model=llm.model,
     )
 
 
-def confirm(db: Session, shop_id: int, data: ParseConfirm) -> ParseConfirmResult:
+def confirm(
+    db: Session,
+    shop_id: int,
+    data: ParseConfirm,
+    before_commit: Callable[[ParseConfirmResult], None] | None = None,
+) -> ParseConfirmResult:
     """Save the confirmed entry, creating the customer first if needed, in one commit."""
-    return confirm_many(db, shop_id, ParseConfirmMany(entries=[data])).results[0]
+    many = ParseConfirmMany(entries=[data], timing=data.timing)
+    hook = before_commit and (lambda answer: before_commit(answer.results[0]))
+    return confirm_many(db, shop_id, many, hook).results[0]
 
 
-def confirm_many(db: Session, shop_id: int, data: ParseConfirmMany) -> ParseConfirmManyResult:
+def confirm_many(
+    db: Session,
+    shop_id: int,
+    data: ParseConfirmMany,
+    before_commit: Callable[[ParseConfirmManyResult], None] | None = None,
+) -> ParseConfirmManyResult:
     """Save several confirmed entries in one commit: all of them, or (on any error) none.
 
     Two entries for the same new customer ("tanvir 50 baki, tanvir 20 dilo") create them once.
+    `before_commit` gets the answer just before the commit, to save with it (idempotency).
     """
     created: dict[tuple[str, str], Customer] = {}
     saved = []
@@ -206,7 +223,9 @@ def confirm_many(db: Session, shop_id: int, data: ParseConfirmMany) -> ParseConf
         )
         txn = transaction_service.add_transaction(db, customer, txn_data)
         saved.append((txn, customer, is_new))
-    db.commit()
+    if data.timing is not None:
+        entry_speed.record(db, shop_id, data.timing, entry_count=len(saved))
+    # The entries are flushed, so balances already count them (all of them, for each customer).
     results = []
     for txn, customer, is_new in saved:
         transaction = transaction_service.with_balance(db, txn)
@@ -217,5 +236,9 @@ def confirm_many(db: Session, shop_id: int, data: ParseConfirmMany) -> ParseConf
                 customer_created=is_new,
             )
         )
+    answer = ParseConfirmManyResult(results=results)
+    if before_commit is not None:
+        before_commit(answer)
+    db.commit()
     logger.info("Saved %d entries in shop %d", len(results), shop_id)
-    return ParseConfirmManyResult(results=results)
+    return answer

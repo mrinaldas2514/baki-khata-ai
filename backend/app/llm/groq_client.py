@@ -15,10 +15,19 @@ _REASONING_MODEL_PREFIXES = ("openai/gpt-oss",)
 class GroqLLMClient:
     """LLMClient backed by Groq's chat completions API in JSON mode."""
 
-    def __init__(self, api_key: str, model: str, timeout_seconds: float = 20.0) -> None:
-        self._client = groq.Groq(api_key=api_key, timeout=timeout_seconds, max_retries=1)
+    parser = "llm"
+
+    def __init__(
+        self, api_key: str, model: str, timeout_seconds: float = 20.0, max_retries: int = 1
+    ) -> None:
+        # The SDK waits as long as Groq's Retry-After says before retrying a 429.
+        self._client = groq.Groq(api_key=api_key, timeout=timeout_seconds, max_retries=max_retries)
         self._model = model
         self._reasoning = model.startswith(_REASONING_MODEL_PREFIXES)
+
+    @property
+    def model(self) -> str:
+        return self._model
 
     def complete_json(self, messages: list[ChatMessage]) -> str:
         options = {"reasoning_effort": "low"} if self._reasoning else {}

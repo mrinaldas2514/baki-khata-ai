@@ -32,9 +32,32 @@ async function submit(sentence: string) {
   return user
 }
 
+// Entry speed travels with every save (EntrySpeed.test.tsx checks the numbers).
+const TYPED = { duration_ms: expect.any(Number), input: 'typed' }
+
 function card() {
   return screen.getByRole('region', { name: strings.confirmTitle })
 }
+
+describe('who read the sentence', () => {
+  it('labels an AI reading "AI", with the model name on hover', async () => {
+    mockApi({ [RECENT]: { body: [] }, [PARSE]: { body: preview({}) } })
+    await submit('salma apa pach sho taka baki, dal r tel')
+
+    const label = within(await screen.findByRole('region', { name: strings.confirmTitle })).getByTestId('parser-label')
+    expect(label).toHaveTextContent(strings.parser.llm)
+    expect(label).toHaveAttribute('title', strings.parser.llmTitle('openai/gpt-oss-120b'))
+  })
+
+  it('labels the rule-based parser "AI chhara"', async () => {
+    mockApi({ [RECENT]: { body: [] }, [PARSE]: { body: preview({ parser: 'rules' }) } })
+    await submit('salma apa pach sho taka baki, dal r tel')
+
+    const label = within(await screen.findByRole('region', { name: strings.confirmTitle })).getByTestId('parser-label')
+    expect(label).toHaveTextContent(strings.parser.rules)
+    expect(label).toHaveAttribute('title', strings.parser.rulesTitle)
+  })
+})
 
 describe('matched customer', () => {
   const matched = preview({
@@ -73,7 +96,14 @@ describe('matched customer', () => {
     expect(await screen.findByText(`✓ ${strings.savedTitle}`)).toBeInTheDocument()
     expect(screen.getByTestId('new-balance')).toHaveTextContent('Baki ৳700')
     expect(api.bodiesOf(CONFIRM)).toEqual([
-      { raw_text: matched.raw_text, type: 'credit', amount: 500, item: 'dal, tel', customer_id: salma.id },
+      {
+        raw_text: matched.raw_text,
+        type: 'credit',
+        amount: 500,
+        item: 'dal, tel',
+        customer_id: salma.id,
+        timing: TYPED,
+      },
     ])
     const rows = within(screen.getByRole('region', { name: strings.recentTitle })).getAllByRole('listitem')
     expect(rows).toHaveLength(2)
@@ -209,6 +239,7 @@ describe('new customer', () => {
       amount: 90,
       item: null,
       new_customer: { name: 'Tanvir', note: null },
+      timing: TYPED,
     })
   })
 
@@ -298,7 +329,8 @@ describe('edit mode', () => {
 
 describe('errors fall back to manual entry', () => {
   it.each([
-    ['network failure', 'network-error' as const, strings.errors.network],
+    // No answer at all: read on the phone, which can't find an amount here either.
+    ['network failure', 'network-error' as const, strings.offline.cantRead],
     ['AI gave a bad answer', { status: 502, body: { detail: 'invalid answer twice' } }, strings.errors.aiFailed],
     ['AI not reachable', { status: 503, body: { detail: 'not reachable' } }, strings.errors.aiUnavailable],
     ['no name or amount', { status: 422, body: { detail: 'no amount' } }, strings.errors.notTransaction],
@@ -317,7 +349,7 @@ describe('errors fall back to manual entry', () => {
     const api = mockApi({
       [RECENT]: { body: [] },
       [CUSTOMERS]: { body: [salma] },
-      [PARSE]: 'network-error',
+      [PARSE]: { status: 503, body: { detail: 'AI not reachable' } },
       [CONFIRM]: (body) => ({ status: 201, body: confirmResult(customer(11, 'Rina', 0), body as never, 250, true) }),
     })
     const user = await submit('rina 250 er jinis nilo')
@@ -339,6 +371,7 @@ describe('errors fall back to manual entry', () => {
       amount: 250,
       item: 'saban',
       new_customer: { name: 'Rina', note: null },
+      timing: TYPED,
     })
   })
 

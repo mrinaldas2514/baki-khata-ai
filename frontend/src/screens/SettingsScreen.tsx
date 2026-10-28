@@ -3,8 +3,10 @@ import { ApiError, api } from '../api/client'
 import type { User } from '../api/types'
 import { Sheet } from '../components/Dialog'
 import { Alert, Button, PasswordInput } from '../components/ui'
+import { forgetCustomers } from '../offline/customerCache'
+import { forgetShop, useQueue } from '../offline/queue'
 import { formatPhone } from '../phone'
-import { endSession, updateUser } from '../session'
+import { currentShopId, endSession, updateUser } from '../session'
 import { strings } from '../strings'
 
 /** Save a downloaded file on the phone (or computer). */
@@ -63,7 +65,7 @@ function AiSetting({ user }: { user: User }) {
   return (
     <section className="flex flex-col gap-3 rounded-3xl bg-white p-4 shadow-md">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-xl font-bold text-stone-900" id={`${hintId}-label`}>
+        <h3 className="min-w-0 text-xl font-bold text-stone-900" id={`${hintId}-label`}>
           {strings.settings.aiTitle}
         </h3>
         <button
@@ -118,6 +120,7 @@ function ExportSection() {
 
 function LogoutButton() {
   const [busy, setBusy] = useState(false)
+  const pending = useQueue().items.length
 
   async function logout() {
     setBusy(true)
@@ -127,9 +130,12 @@ function LogoutButton() {
   }
 
   return (
-    <Button variant="secondary" onClick={logout} disabled={busy}>
-      {busy ? strings.settings.loggingOut : strings.settings.logout}
-    </Button>
+    <>
+      {pending > 0 && <Alert tone="warning">{strings.offline.logoutWarning(pending)}</Alert>}
+      <Button variant="secondary" onClick={logout} disabled={busy}>
+        {busy ? strings.settings.loggingOut : strings.settings.logout}
+      </Button>
+    </>
   )
 }
 
@@ -153,7 +159,9 @@ function DeleteAccount() {
     setBusy(true)
     setError(null)
     try {
+      const shopId = currentShopId()
       await api.deleteAccount(password)
+      await Promise.all([forgetShop(shopId), forgetCustomers(shopId)])
       endSession('deleted')
     } catch (failure) {
       setError(

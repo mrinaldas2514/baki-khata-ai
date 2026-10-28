@@ -2,8 +2,9 @@
 
 Groq retires models from time to time (llama-3.3-70b-versatile in 2026). Without a check the
 only symptom is "AI ekhon kaj korche na" in the app, so at startup the backend asks Groq
-about GROQ_MODEL and GROQ_STT_MODEL and logs an error that says what to change. The same
-message is logged if a request later fails because of the model.
+which models it serves, checks that GROQ_MODEL and GROQ_STT_MODEL are among them, and logs
+an error that says what to change. A similar message is logged if a request later fails
+because of the model.
 """
 
 import logging
@@ -56,7 +57,12 @@ def log_if_model_rejected(exc: groq.APIError, setting: str, model: str) -> bool:
 
 
 def check_configured_models(settings: Settings, client: groq.Groq | None = None) -> list[str]:
-    """Ask Groq about each configured model. Returns the settings it rejected (and logs why).
+    """Ask Groq which models it serves and check each configured one is among them.
+
+    Returns the settings whose model Groq doesn't list (and logs why). The ids are looked up
+    in `models.list()` rather than fetched one by one with `models.retrieve()`: the SDK puts
+    the id in the URL path and escapes its slash, so a valid id such as
+    "openai/gpt-oss-120b" would come back as "The model `openai%2Fgpt-oss-120b` does not exist".
 
     Does nothing without GROQ_API_KEY. Network problems are only a warning: the check must
     never stop the backend from starting.
@@ -72,21 +78,26 @@ def check_configured_models(settings: Settings, client: groq.Groq | None = None)
     if settings.llm_provider != "fake":
         models = {"GROQ_MODEL": settings.groq_model, **models}
 
+    try:
+        available = {model.id for model in client.models.list().data}
+    except groq.AuthenticationError:
+        logger.error("Groq rejected GROQ_API_KEY. Check the key in backend/.env.")
+        return []
+    except groq.APIStatusError as exc:
+        logger.warning("Could not check the configured models with Groq: %s", exc)
+        return []
+    except groq.APIError as exc:
+        logger.warning("Could not reach Groq to check the configured models: %s", exc)
+        return []
+
     rejected = []
     for setting, model in models.items():
-        try:
-            client.models.retrieve(model)
-        except groq.AuthenticationError:
-            logger.error("Groq rejected GROQ_API_KEY. Check the key in backend/.env.")
-            return rejected
-        except groq.APIStatusError as exc:
-            if log_if_model_rejected(exc, setting, model):
-                rejected.append(setting)
-            else:
-                logger.warning("Could not check %s=%r with Groq: %s", setting, model, exc)
-        except groq.APIError as exc:
-            logger.warning("Could not reach Groq to check the configured models: %s", exc)
-            return rejected
+        if model not in available:
+            reason = (
+                f"The model `{model}` is not in the list of models Groq serves to this API key."
+            )
+            logger.error(rejected_model_message(setting, model, reason))
+            rejected.append(setting)
     return rejected
 
 

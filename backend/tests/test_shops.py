@@ -2,7 +2,7 @@
 
 
 def test_health(anon_client):
-    assert anon_client.get("/health").json() == {"status": "ok"}
+    assert anon_client.get("/health").json() == {"status": "ok", "database": "ok"}
 
 
 def test_get_shop(client, shop):

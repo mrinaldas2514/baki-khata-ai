@@ -16,14 +16,21 @@ from app.services.reminders import format_amount, whatsapp_number
 @pytest.fixture
 def rahim(customer, add_txn):
     # Customer "Rahim" (Bazar road, +8801711000000) in "Karim Store" owned by "Karim".
-    add_txn(customer["id"], "credit", 1000, created_at=datetime(2026, 9, 12, 6, 0, tzinfo=UTC).isoformat())
+    add_txn(
+        customer["id"],
+        "credit",
+        1000,
+        created_at=datetime(2026, 9, 12, 6, 0, tzinfo=UTC).isoformat(),
+    )
     add_txn(customer["id"], "credit", 500)
     add_txn(customer["id"], "payment", 300)
     return customer
 
 
 def remind(client, shop, customer, **body):
-    return client.post(f"/shops/{shop['id']}/customers/{customer['id']}/reminder", json=body or None)
+    return client.post(
+        f"/shops/{shop['id']}/customers/{customer['id']}/reminder", json=body or None
+    )
 
 
 def test_template_reminder_has_name_amount_date_and_shop(client, shop, rahim, fake_llm):
@@ -63,7 +70,9 @@ def test_reminder_uses_the_ai_wording_when_it_keeps_the_facts(client, shop, rahi
 @pytest.mark.parametrize(
     "answer",
     [
-        {"message": "Rahim bhai, apnar 2,000 taka baki ache. Dhonnobad, Karim Store"},  # wrong amount
+        {
+            "message": "Rahim bhai, apnar 2,000 taka baki ache. Dhonnobad, Karim Store"
+        },  # wrong amount
         {"message": "Rahim bhai, 1,200 taka baki, 7 diner moddhe din. Karim Store"},  # new number
         {"message": "Bhai, apnar 1,200 taka baki ache. Dhonnobad, Karim Store"},  # name dropped
         {"message": "short"},
@@ -104,11 +113,11 @@ def test_reminder_for_missing_or_other_shops_customer(client, shop, rahim, other
     assert client.post(f"/shops/{other['id']}/customers/{rahim['id']}/reminder").status_code == 404
 
 
-def test_demo_parser_does_not_reword_reminders(
-    engine, monkeypatch, shop, rahim, owner_headers
-):
+def test_demo_parser_does_not_reword_reminders(engine, monkeypatch, shop, rahim, owner_headers):
     """With only the rule-based parser (no API key) the template is used as is."""
-    monkeypatch.setattr("app.llm.get_settings", lambda: Settings(_env_file=None, llm_provider="fake"))
+    monkeypatch.setattr(
+        "app.llm.get_settings", lambda: Settings(_env_file=None, llm_provider="fake")
+    )
     with TestClient(create_app(engine), headers=owner_headers) as client:
         body = remind(client, shop, rahim).json()
     assert body["polished"] is False

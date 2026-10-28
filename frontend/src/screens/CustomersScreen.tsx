@@ -122,7 +122,7 @@ export function CustomersScreen({ search, onSearch, sort, onSort }: Props) {
           )}
         </div>
 
-        <div role="group" aria-label={strings.sortLabel} className="flex gap-2">
+        <div role="group" aria-label={strings.sortLabel} className="flex flex-wrap gap-2">
           {SORTS.map((value) => (
             <button
               key={value}

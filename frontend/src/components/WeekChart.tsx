@@ -81,25 +81,28 @@ export function WeekChart({ days, today }: { days: DaySummary[]; today: string }
         </>
       )}
 
-      <table className="sr-only">
-        <caption>{strings.weekTableCaption}</caption>
-        <thead>
-          <tr>
-            <th scope="col">{strings.weekDay}</th>
-            <th scope="col">{strings.weekLegendCredit}</th>
-            <th scope="col">{strings.weekLegendPayment}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {days.map((day) => (
-            <tr key={day.date}>
-              <th scope="row">{label(day)}</th>
-              <td>{formatTaka(day.credit)}</td>
-              <td>{formatTaka(day.payment)}</td>
+      {/* sr-only on a wrapper: a table ignores width: 1px and would widen the page. */}
+      <div className="sr-only">
+        <table>
+          <caption>{strings.weekTableCaption}</caption>
+          <thead>
+            <tr>
+              <th scope="col">{strings.weekDay}</th>
+              <th scope="col">{strings.weekLegendCredit}</th>
+              <th scope="col">{strings.weekLegendPayment}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {days.map((day) => (
+              <tr key={day.date}>
+                <th scope="row">{label(day)}</th>
+                <td>{formatTaka(day.credit)}</td>
+                <td>{formatTaka(day.payment)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </section>
   )
 }

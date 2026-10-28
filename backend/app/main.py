@@ -7,13 +7,15 @@ from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from sqlalchemy import Engine
+from sqlalchemy import Engine, text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 
 from app.auth import NotAuthenticatedError
 from app.config import get_settings
 from app.database import build_engine, check_schema
 from app.groq_models import start_model_check
+from app.http_security import BodySizeLimit, SecurityHeaders
 from app.llm import LLMClient, LLMNotConfiguredError, LLMProviderError
 from app.logging_privacy import install_access_log_filter
 from app.rate_limit import RateLimitedError, build_rate_limiter
@@ -38,6 +40,10 @@ from app.stt import SpeechToTextClient, STTNotConfiguredError, STTProviderError
 logger = logging.getLogger(__name__)
 
 
+class ProductionConfigError(RuntimeError):
+    """ENVIRONMENT=production with settings that aren't safe (no JWT_SECRET, SQLite...)."""
+
+
 def create_app(
     engine: Engine | None = None,
     llm_client: LLMClient | None = None,
@@ -49,8 +55,16 @@ def create_app(
 
     `check_migrations` (default: only for the database from DATABASE_URL) stops startup with a
     clear message when the database needs `alembic upgrade head`.
+
+    With ENVIRONMENT=production it refuses to start until the settings are safe (see
+    Settings.production_problems), and the interactive API docs are off.
     """
     settings = get_settings()
+    if problems := settings.production_problems():
+        raise ProductionConfigError(
+            "ENVIRONMENT=production, but the settings aren't safe yet:\n"
+            + "\n".join(f"  - {problem}" for problem in problems)
+        )
     if check_migrations is None:
         check_migrations = engine is None
     if engine is None:
@@ -65,7 +79,12 @@ def create_app(
             start_model_check(settings)
         yield
 
-    app = FastAPI(title=settings.app_name, version="0.1.0", lifespan=lifespan)
+    docs = (
+        {}
+        if not settings.is_production
+        else {"docs_url": None, "redoc_url": None, "openapi_url": None}
+    )
+    app = FastAPI(title=settings.app_name, version="0.1.0", lifespan=lifespan, **docs)
     app.state.session_factory = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
     # None means "build the configured provider on first use" (see app.llm.get_llm_client).
     app.state.llm_client = llm_client
@@ -75,14 +94,23 @@ def create_app(
     app.state.rate_limiter = build_rate_limiter(settings)
     install_access_log_filter()
 
-    # Lets the frontend (a different origin in development) call the API from the browser.
+    # Added first = innermost: both run inside CORS, so their answers (a 413) carry its headers.
+    audio_limit = settings.stt_max_audio_bytes + 64 * 1024
+    app.add_middleware(
+        BodySizeLimit,
+        limit_for=lambda path: audio_limit if path == "/transcribe" else settings.max_request_bytes,
+    )
+    app.add_middleware(SecurityHeaders, hsts=settings.is_production)
+    # Lets the frontend (another origin) call the API from the browser: only the origins in
+    # CORS_ORIGINS, only the methods and headers the app uses.
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.cors_origins,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_origins=settings.allowed_origins,
+        allow_methods=["GET", "POST", "PATCH", "DELETE"],
+        allow_headers=["Authorization", "Content-Type", "Idempotency-Key"],
         # Readable by the app: the CSV's file name, and how long to wait after a 429.
         expose_headers=["Content-Disposition", "Retry-After"],
+        max_age=600,
     )
 
     app.include_router(auth.router)
@@ -96,7 +124,18 @@ def create_app(
 
     @app.get("/health", tags=["health"])
     def health():
-        return {"status": "ok"}
+        """For the hosting provider's health check: is the API up, and can it reach the database?"""
+        try:
+            with engine.connect() as connection:
+                connection.execute(text("SELECT 1"))
+        except SQLAlchemyError as exc:
+            # The error can hold the database's address; log its kind only.
+            logger.error("Health check: the database is unreachable (%s)", type(exc).__name__)
+            return JSONResponse(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                content={"status": "error", "database": "unreachable"},
+            )
+        return {"status": "ok", "database": "ok"}
 
     _register_error_handlers(app)
     return app
@@ -184,6 +223,15 @@ def _register_error_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=status.HTTP_502_BAD_GATEWAY,
             content={"detail": "The speech-to-text service failed. Please try again or type it."},
+        )
+
+    @app.exception_handler(Exception)
+    async def _unexpected(_request: Request, exc: Exception):
+        # Never send a traceback or the error's text (it can hold data) to the client.
+        logger.exception("Unexpected error: %s", type(exc).__name__)
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": "Something went wrong on the server. Please try again."},
         )
 
     @app.exception_handler(RequestValidationError)

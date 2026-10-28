@@ -71,6 +71,7 @@ describe('several customers in one sentence', () => {
     expect(second).toHaveTextContent(strings.typePayment)
     expect(within(third).getByTestId('customer-summary')).toHaveTextContent(strings.newCustomerNamed('Salma'))
     expect(third).toHaveTextContent('Jinis: dal')
+    for (const each of cards()) expect(within(each).getByTestId('parser-label')).toHaveTextContent(strings.parser.llm)
 
     const save = screen.getByRole('button', { name: strings.multi.pickAll })
     expect(save).toBeDisabled()
@@ -125,6 +126,7 @@ describe('several customers in one sentence', () => {
           { raw_text: SENTENCE, type: 'credit', amount: 250, item: null, customer_id: 1 },
           { raw_text: SENTENCE, type: 'payment', amount: 500, item: null, customer_id: 2 },
         ],
+        timing: { duration_ms: expect.any(Number), input: 'typed' },
       },
     ])
     const saved = screen.getAllByTestId('saved-entry')
@@ -142,10 +144,11 @@ describe('several customers in one sentence', () => {
   })
 
   it('a failed save says so and keeps every card', async () => {
-    const { user } = await submit({ [CONFIRM_MANY]: 'network-error' })
+    // (No answer at all keeps them on the phone instead: Offline.test.tsx.)
+    const { user } = await submit({ [CONFIRM_MANY]: { status: 500, body: { detail: 'Something went wrong' } } })
     await user.click(within(cards()[1]).getByRole('button', { name: /Karim.*Haat/ }))
     await user.click(screen.getByRole('button', { name: strings.multi.saveAll(3) }))
-    expect(await screen.findByText(strings.errors.network)).toBeInTheDocument()
+    expect(await screen.findByText(strings.errors.saveFailed)).toBeInTheDocument()
     expect(cards()).toHaveLength(3)
   })
 })

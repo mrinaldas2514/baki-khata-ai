@@ -1,0 +1,4 @@
+text,customer_name,amount,type,item
+rahim bhai 2 kg chal 120 taka baki,rahim,120,credit,2 kg chal
+"karim 500 dilo, salma 200 baki",karim,500,payment,
+"karim 500 dilo, salma 200 baki",salma,200,credit,

@@ -14,3 +14,12 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 )
+
+// Installable, and opens without internet (pwa/sw.js). Not in development: Vite serves fresh files.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      // No service worker (e.g. a private window): the app works, just not offline.
+    })
+  })
+}

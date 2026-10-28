@@ -74,7 +74,10 @@ export function BottomNav({ active }: { active: Tab }) {
               >
                 {current && <span className="absolute inset-x-6 top-0 h-1 rounded-b-full bg-emerald-700" aria-hidden />}
                 {item.icon}
-                <span>{item.label}</span>
+                {/* Large text on a small phone: a little smaller, and may break rather than overflow. */}
+                <span className="max-w-full text-center text-[clamp(0.75rem,4.4vw,1rem)] leading-tight [overflow-wrap:anywhere]">
+                  {item.label}
+                </span>
               </a>
             </li>
           )

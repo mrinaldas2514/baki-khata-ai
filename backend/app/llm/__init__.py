@@ -5,13 +5,20 @@ import logging
 from fastapi import Request
 
 from app.config import Settings, get_settings
-from app.llm.base import ChatMessage, LLMClient, LLMNotConfiguredError, LLMProviderError
+from app.llm.base import (
+    ChatMessage,
+    LLMClient,
+    LLMNotConfiguredError,
+    LLMProviderError,
+    ParserKind,
+)
 
 __all__ = [
     "ChatMessage",
     "LLMClient",
     "LLMNotConfiguredError",
     "LLMProviderError",
+    "ParserKind",
     "build_llm_client",
     "get_llm_client",
     "get_writing_llm_client",

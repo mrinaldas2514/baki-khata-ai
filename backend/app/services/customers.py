@@ -106,9 +106,7 @@ def get_customer_with_balance(db: Session, shop_id: int, customer_id: int) -> Cu
     return to_customer_read(customer, get_customer_balance(db, customer.id))
 
 
-def list_customers(
-    db: Session, shop_id: int, search: str | None = None
-) -> list[CustomerListItem]:
+def list_customers(db: Session, shop_id: int, search: str | None = None) -> list[CustomerListItem]:
     """All customers of a shop with their balances (and how old their baki is), sorted by name."""
     get_shop(db, shop_id)
     stmt = (

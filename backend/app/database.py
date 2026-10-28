@@ -16,8 +16,21 @@ ALEMBIC_INI = Path(__file__).resolve().parent.parent / "alembic.ini"
 def build_engine(database_url: str, *, echo: bool = False, **kwargs: Any) -> Engine:
     """Create an engine. SQLite-specific tweaks are only applied for SQLite URLs."""
     is_sqlite = database_url.startswith("sqlite")
-    connect_args = {"check_same_thread": False} if is_sqlite else {}
-    engine = create_engine(database_url, echo=echo, connect_args=connect_args, **kwargs)
+    if is_sqlite:
+        connect_args = {"check_same_thread": False}
+    else:
+        # Don't hang forever on an unreachable server; replace connections the server dropped.
+        connect_args = {"connect_timeout": 10}
+        kwargs.setdefault("pool_pre_ping", True)
+    engine = create_engine(
+        database_url,
+        echo=echo,
+        connect_args=connect_args,
+        # Keep the values (names, phone numbers, amounts) out of error messages and logs,
+        # unless SQL_ECHO is on for debugging.
+        hide_parameters=not echo,
+        **kwargs,
+    )
 
     if is_sqlite:
         # SQLite ignores foreign keys unless asked to enforce them on every connection.

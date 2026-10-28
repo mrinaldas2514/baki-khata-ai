@@ -89,10 +89,16 @@ export interface EntryPreview {
   warnings: string[]
 }
 
+/** Who read the sentence: the AI model, or the simple rules (AI off, or no AI key on the server). */
+export type ParserKind = 'llm' | 'rules'
+
 /** `parsed`/`match`/`warnings` are the first entry; `entries` has all of them (usually one). */
 export interface ParsePreview extends EntryPreview {
   raw_text: string
   entries?: EntryPreview[]
+  parser: ParserKind
+  /** e.g. "openai/gpt-oss-120b", or "rule-based". */
+  model: string
 }
 
 export interface Transaction {
@@ -157,6 +163,12 @@ export interface DaySummary {
   payment: number
 }
 
+/** "Gore ekta hisab": median time per entry over the latest (up to 50) entries. */
+export interface EntrySpeed {
+  median_seconds: number | null
+  samples: number
+}
+
 export interface Dashboard {
   total_outstanding: number
   customers_with_baki: number
@@ -168,6 +180,7 @@ export interface Dashboard {
   overdue_customers: OverdueCustomer[]
   /** Oldest first, ending with today. */
   last_7_days: DaySummary[]
+  entry_speed: EntrySpeed
 }
 
 export interface Reminder {
@@ -183,6 +196,8 @@ export interface ParseConfirm {
   type: TransactionType
   amount: number
   item: string | null
+  /** When it happened (ISO). Left out: now. Entries saved offline carry the time they were saved. */
+  created_at?: string
   customer_id?: number
   new_customer?: { name: string; note?: string | null }
 }

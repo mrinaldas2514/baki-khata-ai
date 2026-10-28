@@ -1,4 +1,6 @@
 import { API_URL } from '../config'
+import type { EntryTiming } from '../entrySpeed'
+import { cacheCustomers } from '../offline/customerCache'
 import { currentShopId, endSession, getSession } from '../session'
 import type {
   AuthResult,
@@ -125,20 +127,34 @@ export const api = {
   parse: (text: string) =>
     request<ParsePreview>(`${shopPath()}/parse`, { method: 'POST', body: JSON.stringify({ text }) }),
 
-  /** Save a (possibly edited) entry, creating the customer if it's new. */
-  confirm: (data: ParseConfirm) =>
-    request<ParseConfirmResult>(`${shopPath()}/parse/confirm`, { method: 'POST', body: JSON.stringify(data) }),
+  /**
+   * Save a (possibly edited) entry, creating the customer if it's new. `timing`: entry speed.
+   * `key` (Idempotency-Key): sending the same save again with it doesn't save it twice.
+   */
+  confirm: (data: ParseConfirm, timing?: EntryTiming, key?: string) =>
+    request<ParseConfirmResult>(`${shopPath()}/parse/confirm`, {
+      method: 'POST',
+      body: JSON.stringify({ ...data, timing }),
+      headers: key ? { 'Idempotency-Key': key } : undefined,
+    }),
 
   /** Save every entry of a sentence about several customers, all together (or none). */
-  confirmMany: (entries: ParseConfirm[]) =>
+  confirmMany: (entries: ParseConfirm[], timing?: EntryTiming, key?: string) =>
     request<ParseConfirmManyResult>(`${shopPath()}/parse/confirm-many`, {
       method: 'POST',
-      body: JSON.stringify({ entries }),
+      body: JSON.stringify({ entries, timing }),
+      headers: key ? { 'Idempotency-Key': key } : undefined,
     }),
 
   recentTransactions: (limit = 10) => request<RecentTransaction[]>(`${shopPath()}/transactions?limit=${limit}`),
 
-  customers: () => request<CustomerListItem[]>(`${shopPath()}/customers`),
+  /** Every customer with their balance. Also kept on the phone, for entries written offline. */
+  customers: async () => {
+    const shopId = currentShopId()
+    const customers = await request<CustomerListItem[]>(`/shops/${shopId}/customers`)
+    cacheCustomers(shopId, customers)
+    return customers
+  },
 
   createCustomer: (data: CustomerInput) =>
     request<Customer>(`${shopPath()}/customers`, { method: 'POST', body: JSON.stringify(data) }),

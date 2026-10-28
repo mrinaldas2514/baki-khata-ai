@@ -29,6 +29,7 @@ def test_ai_off_parse_uses_the_rule_based_parser_and_never_the_llm(
     assert body["parsed"]["amount"] == 500
     assert body["parsed"]["type"] == "credit"
     assert body["match"]["status"] == "exact"
+    assert (body["parser"], body["model"]) == ("rules", "rule-based")  # "AI chhara" in the app
     assert fake_llm.calls == []  # nothing went to the AI provider
 
 
@@ -61,8 +62,9 @@ def test_ai_back_on_uses_the_llm_again(client, shop, fake_llm: FakeLLM):
     fake_llm.reply(
         {"customer_name": "karim", "amount": 50, "type": "payment", "item": None, "confidence": 0.9}
     )
-    client.post(f"/shops/{shop['id']}/parse", json={"text": "karim 50 dilo"})
+    response = client.post(f"/shops/{shop['id']}/parse", json={"text": "karim 50 dilo"})
     assert len(fake_llm.calls) == 1
+    assert response.json()["parser"] == "llm"
 
 
 # --- CSV export ---------------------------------------------------------------------------

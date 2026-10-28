@@ -56,6 +56,8 @@ def test_preview_matches_existing_customer_and_saves_nothing(
     assert body["match"]["customer"]["balance"] == 300
     assert body["match"]["customer"]["score"] == 100
     assert body["warnings"] == []
+    # Which parser read it, for the "AI" / "AI chhara" label.
+    assert (body["parser"], body["model"]) == ("llm", "fake-llm")
     # Still only the one transaction added above.
     assert transaction_count(client, shop) == 1
 
@@ -179,6 +181,29 @@ def test_preview_with_groq_but_no_api_key_is_503(engine, monkeypatch):
         )
     assert response.status_code == 503
     assert "GROQ_API_KEY" in response.json()["detail"]
+
+
+def test_preview_without_a_key_says_the_rules_read_it(engine, monkeypatch):
+    """AI is on, but the server has no key: the rule-based parser answers, and says so."""
+    from fastapi.testclient import TestClient
+
+    monkeypatch.setattr("app.llm.get_settings", lambda: Settings(_env_file=None))
+    with TestClient(create_app(engine)) as client:
+        owner = client.post("/auth/register", json=registration()).json()
+        response = client.post(
+            f"/shops/{owner['user']['shop']['id']}/parse",
+            json={"text": "karim 500 dilo"},
+            headers=auth_header(owner["access_token"]),
+        )
+    assert response.status_code == 200, response.text
+    assert (response.json()["parser"], response.json()["model"]) == ("rules", "rule-based")
+
+
+def test_groq_client_reports_its_model():
+    from app.llm.groq_client import GroqLLMClient
+
+    client = GroqLLMClient(api_key="gsk_test", model="openai/gpt-oss-120b")
+    assert (client.parser, client.model) == ("llm", "openai/gpt-oss-120b")
 
 
 # --- Confirm ------------------------------------------------------------------------------

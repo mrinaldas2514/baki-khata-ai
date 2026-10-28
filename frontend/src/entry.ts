@@ -1,4 +1,4 @@
-import type { Customer, EntryPreview, ParseConfirm, TransactionType } from './api/types'
+import type { Customer, EntryPreview, ParseConfirm, ParsePreview, TransactionType } from './api/types'
 
 /** Who the entry is for: someone already in the khata, or a customer to create on save. */
 export type CustomerChoice =
@@ -39,6 +39,9 @@ export function toConfirmRequest(rawText: string, draft: Draft): ParseConfirm {
     ? { ...base, customer_id: draft.choice.customer.id }
     : { ...base, new_customer: { name: draft.choice.name, note: draft.choice.note || null } }
 }
+
+/** Who read the sentence, for the "AI" / "AI chhara" label. */
+export type ReadBy = Pick<ParsePreview, 'parser' | 'model'>
 
 /** One card of a sentence about several customers, as the shopkeeper has it now. */
 export interface MultiItem {

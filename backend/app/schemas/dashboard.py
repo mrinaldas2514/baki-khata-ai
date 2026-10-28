@@ -23,6 +23,13 @@ class DaySummary(BaseModel):
     payment: int = Field(description="Payments received that day")
 
 
+class EntrySpeed(BaseModel):
+    median_seconds: float | None = Field(
+        description="Median time per entry, first keystroke or mic press to saved (None: no data)"
+    )
+    samples: int = Field(description="How many of the latest entries it's the median of (max 50)")
+
+
 class Dashboard(BaseModel):
     total_outstanding: int = Field(description="Sum of all positive customer balances")
     customers_with_baki: int
@@ -33,3 +40,4 @@ class Dashboard(BaseModel):
     overdue_days: int
     overdue_customers: list[OverdueCustomer] = Field(description="Oldest debt first")
     last_7_days: list[DaySummary] = Field(description="Oldest first, ending with today")
+    entry_speed: EntrySpeed = Field(description="How long writing an entry takes, recently")

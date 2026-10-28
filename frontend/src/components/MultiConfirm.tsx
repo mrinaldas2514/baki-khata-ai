@@ -1,15 +1,16 @@
 import { LOW_CONFIDENCE } from '../config'
-import type { CustomerChoice, MultiItem } from '../entry'
+import type { CustomerChoice, MultiItem, ReadBy } from '../entry'
 import { formatTaka } from '../format'
 import { strings } from '../strings'
 import { TYPE_STYLES } from '../typeStyles'
 import { CustomerOption, CustomerSummary, NewCustomerOption } from './CustomerSummary'
 import { EntryForm } from './EntryForm'
-import { Alert, Button, TypeBadge } from './ui'
+import { Alert, Button, ParserLabel, TypeBadge } from './ui'
 
 interface Props {
   rawText: string
   items: MultiItem[]
+  readBy: ReadBy
   onChange: (items: MultiItem[]) => void
   onSaveAll: () => void
   onCancel: () => void
@@ -21,7 +22,7 @@ interface Props {
  * "rahim 200 baki, karim 500 dilo, salma 100 baki": a card per customer. Each can be fixed
  * ("Thik kore din") or dropped ("Bad din"); "Sob save korun" saves them all together.
  */
-export function MultiConfirm({ rawText, items, onChange, onSaveAll, onCancel, saving, error }: Props) {
+export function MultiConfirm({ rawText, items, readBy, onChange, onSaveAll, onCancel, saving, error }: Props) {
   const update = (key: number, changes: Partial<MultiItem>) =>
     onChange(items.map((item) => (item.key === key ? { ...item, ...changes } : item)))
   const ready = items.every((item) => item.choice && !item.editing)
@@ -60,6 +61,7 @@ export function MultiConfirm({ rawText, items, onChange, onSaveAll, onCancel, sa
             key={item.key}
             index={index}
             item={item}
+            readBy={readBy}
             onChoose={(choice) => update(item.key, { choice })}
             onEdit={() => update(item.key, { editing: true })}
             onRemove={() => onChange(items.filter((other) => other.key !== item.key))}
@@ -84,6 +86,7 @@ export function MultiConfirm({ rawText, items, onChange, onSaveAll, onCancel, sa
 function EntryCard({
   index,
   item,
+  readBy,
   onChoose,
   onEdit,
   onRemove,
@@ -91,6 +94,7 @@ function EntryCard({
 }: {
   index: number
   item: MultiItem
+  readBy: ReadBy
   onChoose: (choice: CustomerChoice) => void
   onEdit: () => void
   onRemove: () => void
@@ -113,6 +117,9 @@ function EntryCard({
           {formatTaka(item.amount)}
         </span>
         <TypeBadge type={item.type} />
+        <span className="ml-auto">
+          <ParserLabel parser={readBy.parser} model={readBy.model} />
+        </span>
         {item.item && (
           <span className="w-full text-lg text-stone-900">
             {strings.itemShort}: <span className="font-semibold">{item.item}</span>
@@ -157,21 +164,12 @@ function EntryCard({
         </Alert>
       )}
 
-      <div className="flex gap-3">
-        <Button
-          variant="secondary"
-          className="flex-1 px-2! text-lg! whitespace-nowrap"
-          onClick={onEdit}
-          disabled={disabled}
-        >
+      {/* Side by side; one under the other when large text doesn't fit. */}
+      <div className="flex flex-wrap gap-3">
+        <Button variant="secondary" className="flex-[1_1_8rem] px-2! text-lg!" onClick={onEdit} disabled={disabled}>
           {strings.edit}
         </Button>
-        <Button
-          variant="danger"
-          className="flex-1 px-2! text-lg! whitespace-nowrap"
-          onClick={onRemove}
-          disabled={disabled}
-        >
+        <Button variant="danger" className="flex-[1_1_8rem] px-2! text-lg!" onClick={onRemove} disabled={disabled}>
           {strings.multi.remove}
         </Button>
       </div>

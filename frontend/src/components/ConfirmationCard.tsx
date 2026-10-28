@@ -5,7 +5,7 @@ import { formatTaka } from '../format'
 import { strings } from '../strings'
 import { TYPE_STYLES } from '../typeStyles'
 import { CustomerOption, CustomerSummary, NewCustomerOption } from './CustomerSummary'
-import { Alert, Button, TypeBadge } from './ui'
+import { Alert, Button, ParserLabel, TypeBadge } from './ui'
 
 interface Props {
   preview: ParsePreview
@@ -17,6 +17,16 @@ interface Props {
   error?: string | null
 }
 
+/**
+ * The amount as big as fits: up to 88 px (৳500, ৳1,500), smaller for long ones (৳1,25,000) so
+ * it never runs past the card. Digits are ~0.44 em wide in Noto Sans Bengali; 7rem is the room
+ * the card, panel and page take around it (in rem, so it grows with the phone's text size too).
+ */
+function amountFontSize(text: string): string {
+  const em = (text.length * 0.46).toFixed(2)
+  return `min(5.5rem, calc((100vw - 7rem) / ${em}))`
+}
+
 /** "Thik ache to?": what the AI understood, shown big and clear before anything is saved. */
 export function ConfirmationCard({ preview, onSave, onEdit, onCancel, saving = false, error }: Props) {
   const { parsed, match } = preview
@@ -26,16 +36,24 @@ export function ConfirmationCard({ preview, onSave, onEdit, onCancel, saving = f
   return (
     <section aria-labelledby="confirm-title" className="flex flex-col gap-4 rounded-3xl bg-white p-4 shadow-md">
       <div>
-        <h2 id="confirm-title" className="text-2xl font-bold text-stone-900">
-          {strings.confirmTitle}
-        </h2>
+        <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+          <h2 id="confirm-title" className="text-2xl font-bold text-stone-900">
+            {strings.confirmTitle}
+          </h2>
+          <ParserLabel parser={preview.parser} model={preview.model} />
+        </div>
         <p className="text-base text-stone-600">
           {strings.youWrote}: “{preview.raw_text}”
         </p>
       </div>
 
       <div className={`rounded-2xl border-2 px-4 py-4 ${style.panel}`} data-testid="amount-panel">
-        <p className={`text-5xl font-bold tabular-nums ${style.text}`} data-testid="amount">
+        {/* The number to check at arm's length: as big as fits a 360 px phone. */}
+        <p
+          className={`leading-none font-bold tabular-nums ${style.text}`}
+          style={{ fontSize: amountFontSize(formatTaka(parsed.amount)) }}
+          data-testid="amount"
+        >
           {formatTaka(parsed.amount)}
         </p>
         <p className="mt-2 flex flex-wrap items-center gap-2 text-lg text-stone-800">
@@ -94,11 +112,11 @@ export function ConfirmationCard({ preview, onSave, onEdit, onCancel, saving = f
         >
           {saving ? strings.saving : choice ? strings.save : strings.pickCustomerFirst}
         </Button>
-        <div className="flex gap-3">
-          <Button variant="secondary" className="flex-1" onClick={() => onEdit(choice)} disabled={saving}>
+        <div className="flex flex-wrap gap-3">
+          <Button variant="secondary" className="flex-[1_1_8rem]" onClick={() => onEdit(choice)} disabled={saving}>
             {strings.edit}
           </Button>
-          <Button variant="danger" className="flex-1" onClick={onCancel} disabled={saving}>
+          <Button variant="danger" className="flex-[1_1_8rem]" onClick={onCancel} disabled={saving}>
             {strings.cancel}
           </Button>
         </div>

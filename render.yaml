@@ -1,0 +1,56 @@
+# Render blueprint: the backend API and its PostgreSQL database.
+# In Render: New → Blueprint → pick this repository. Render asks for the values marked
+# `sync: false` (CORS_ORIGINS, GROQ_API_KEY) and makes the rest. See README "Deploying".
+#
+# The frontend is deployed on Vercel (frontend/vercel.json), not here.
+
+services:
+  - type: web
+    name: baki-khata-api
+    runtime: python
+    rootDir: backend
+    # Singapore is Render's closest region to Bangladesh and India.
+    region: singapore
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    # start.sh runs `alembic upgrade head` before uvicorn, so every deploy migrates the
+    # database first (and doesn't start on a failed migration). On a paid plan you can move
+    # the migration to `preDeployCommand: alembic upgrade head` instead.
+    startCommand: ./start.sh
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.13"
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: baki-khata-db
+          property: connectionString
+      # A random 256-bit value, made once by Render. Changing it logs everyone out.
+      - key: JWT_SECRET
+        generateValue: true
+      # The frontend's address on Vercel, e.g. https://baki-khata.vercel.app (no trailing /).
+      - key: CORS_ORIGINS
+        sync: false
+      # Optional: without it the backend uses the rule-based parser ("AI chhara").
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        value: openai/gpt-oss-120b
+      - key: APP_TIMEZONE
+        value: Asia/Dhaka
+      # Render's proxy is in front of the service: trust its X-Forwarded-For for client IPs.
+      - key: FORWARDED_ALLOW_IPS
+        value: "*"
+
+databases:
+  - name: baki-khata-db
+    region: singapore
+    plan: free
+    databaseName: baki_khata
+    user: baki
+    postgresMajorVersion: "16"
+    # Reachable only from Render services in this account, not from the internet.
+    ipAllowList: []

@@ -104,6 +104,7 @@ export function preview(overrides: {
   parsed?: Partial<ParsePreview['parsed']>
   match?: Partial<ParsePreview['match']>
   warnings?: string[]
+  parser?: ParsePreview['parser']
 }): ParsePreview {
   return {
     raw_text: overrides.raw_text ?? 'salma apa pach sho taka baki, dal r tel',
@@ -117,6 +118,8 @@ export function preview(overrides: {
     },
     match: { status: 'new', customer: null, candidates: [], suggested_name: 'Salma', ...overrides.match },
     warnings: overrides.warnings ?? [],
+    parser: overrides.parser ?? 'llm',
+    model: overrides.parser === 'rules' ? 'rule-based' : 'openai/gpt-oss-120b',
   }
 }
 

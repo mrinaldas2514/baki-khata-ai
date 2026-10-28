@@ -1,0 +1,6594 @@
+{
+ "date": "2026-10-28",
+ "parser": "rules",
+ "model": "rule-based",
+ "summary": {
+  "sentences": 186,
+  "entries": 176,
+  "all_correct": {
+   "correct": 168,
+   "total": 186,
+   "rate": 0.9032258064516129
+  },
+  "fields": {
+   "name": {
+    "correct": 172,
+    "total": 176,
+    "rate": 0.9772727272727273
+   },
+   "amount": {
+    "correct": 172,
+    "total": 176,
+    "rate": 0.9772727272727273
+   },
+   "type": {
+    "correct": 168,
+    "total": 176,
+    "rate": 0.9545454545454546
+   },
+   "item": {
+    "correct": 160,
+    "total": 176,
+    "rate": 0.9090909090909091
+   }
+  },
+  "non_transactions_refused": {
+   "correct": 21,
+   "total": 24,
+   "rate": 0.875
+  },
+  "outcomes": {
+   "parsed": 164,
+   "refused": 21,
+   "invalid_output": 1
+  },
+  "latency_ms": {
+   "mean": 0.09918074192805224,
+   "p50": 0.08617699995738803,
+   "p95": 0.2033789999131841,
+   "max": 0.3333639999709703
+  },
+  "categories": {
+   "bangla_digits": {
+    "correct": 11,
+    "total": 11,
+    "rate": 1.0
+   },
+   "bangla_script": {
+    "correct": 14,
+    "total": 14,
+    "rate": 1.0
+   },
+   "banglish_credit": {
+    "correct": 14,
+    "total": 14,
+    "rate": 1.0
+   },
+   "banglish_payment": {
+    "correct": 13,
+    "total": 13,
+    "rate": 1.0
+   },
+   "code_mixed": {
+    "correct": 11,
+    "total": 12,
+    "rate": 0.9166666666666666
+   },
+   "english": {
+    "correct": 11,
+    "total": 13,
+    "rate": 0.8461538461538461
+   },
+   "honorifics": {
+    "correct": 14,
+    "total": 15,
+    "rate": 0.9333333333333333
+   },
+   "items": {
+    "correct": 13,
+    "total": 13,
+    "rate": 1.0
+   },
+   "multi_entry": {
+    "correct": 9,
+    "total": 12,
+    "rate": 0.75
+   },
+   "no_amount": {
+    "correct": 12,
+    "total": 12,
+    "rate": 1.0
+   },
+   "non_transaction": {
+    "correct": 9,
+    "total": 12,
+    "rate": 0.75
+   },
+   "number_words": {
+    "correct": 15,
+    "total": 16,
+    "rate": 0.9375
+   },
+   "past_payment": {
+    "correct": 13,
+    "total": 14,
+    "rate": 0.9285714285714286
+   },
+   "typos": {
+    "correct": 9,
+    "total": 15,
+    "rate": 0.6
+   }
+  },
+  "languages": {
+   "bangla": {
+    "correct": 30,
+    "total": 30,
+    "rate": 1.0
+   },
+   "banglish": {
+    "correct": 102,
+    "total": 115,
+    "rate": 0.8869565217391304
+   },
+   "english": {
+    "correct": 16,
+    "total": 20,
+    "rate": 0.8
+   },
+   "mixed": {
+    "correct": 20,
+    "total": 21,
+    "rate": 0.9523809523809523
+   }
+  }
+ },
+ "results": [
+  {
+   "id": "bc-01",
+   "category": "banglish_credit",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "rahim bhai 2 kg chal 120 taka baki",
+   "expected": [
+    {
+     "customer_name": "rahim",
+     "amount": 120,
+     "type": "credit",
+     "item": "2 kg chal"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "rahim",
+     "amount": 120,
+     "type": "credit",
+     "item": "2 kg chal"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.192
+  },
+  {
+   "id": "bc-02",
+   "category": "banglish_credit",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "polash 1 dozen dim r 2 ta pauruti 180 baki",
+   "expected": [
+    {
+     "customer_name": "polash",
+     "amount": 180,
+     "type": "credit",
+     "item": "1 dozen dim, 2 ta pauruti"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "polash",
+     "amount": 180,
+     "type": "credit",
+     "item": "1 dozen dim, 2 ta pauruti"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.15
+  },
+  {
+   "id": "bc-03",
+   "category": "banglish_credit",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "selim mama 3 ta sabun 105 taka",
+   "expected": [
+    {
+     "customer_name": "selim",
+     "amount": 105,
+     "type": "credit",
+     "item": "3 ta sabun"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "selim",
+     "amount": 105,
+     "type": "credit",
+     "item": "3 ta sabun"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.095
+  },
+  {
+   "id": "bc-04",
+   "category": "banglish_credit",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "kamrul 300 taka baki",
+   "expected": [
+    {
+     "customer_name": "kamrul",
+     "amount": 300,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "kamrul",
+     "amount": 300,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.08
+  },
+  {
+   "id": "bc-05",
+   "category": "banglish_credit",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "liton 1 kg chini 140 taka nilo",
+   "expected": [
+    {
+     "customer_name": "liton",
+     "amount": 140,
+     "type": "credit",
+     "item": "1 kg chini"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "liton",
+     "amount": 140,
+     "type": "credit",
+     "item": "1 kg chini"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.086
+  },
+  {
+   "id": "bc-06",
+   "category": "banglish_credit",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "rana 50 taka cha biscuit baki",
+   "expected": [
+    {
+     "customer_name": "rana",
+     "amount": 50,
+     "type": "credit",
+     "item": "cha, biscuit"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "rana",
+     "amount": 50,
+     "type": "credit",
+     "item": "cha biscuit"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.075
+  },
+  {
+   "id": "bc-07",
+   "category": "banglish_credit",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "faruk 2 packet noodles 60 taka baki rakhlo",
+   "expected": [
+    {
+     "customer_name": "faruk",
+     "amount": 60,
+     "type": "credit",
+     "item": "2 packet noodles"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "faruk",
+     "amount": 60,
+     "type": "credit",
+     "item": "2 packet noodles"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.092
+  },
+  {
+   "id": "bc-08",
+   "category": "banglish_credit",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "mitu 1 liter soyabin tel 190 tk baki",
+   "expected": [
+    {
+     "customer_name": "mitu",
+     "amount": 190,
+     "type": "credit",
+     "item": "1 liter soyabin tel"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "mitu",
+     "amount": 190,
+     "type": "credit",
+     "item": "1 liter soyabin tel"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.135
+  },
+  {
+   "id": "bc-09",
+   "category": "banglish_credit",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "joynal 5 kg alu 150 taka dhar",
+   "expected": [
+    {
+     "customer_name": "joynal",
+     "amount": 150,
+     "type": "credit",
+     "item": "5 kg alu"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "joynal",
+     "amount": 150,
+     "type": "credit",
+     "item": "5 kg alu"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.084
+  },
+  {
+   "id": "bc-10",
+   "category": "banglish_credit",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "shakil 1 ta cigarette packet 350 baki",
+   "expected": [
+    {
+     "customer_name": "shakil",
+     "amount": 350,
+     "type": "credit",
+     "item": "1 ta cigarette packet"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "shakil",
+     "amount": 350,
+     "type": "credit",
+     "item": "1 ta cigarette packet"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.085
+  },
+  {
+   "id": "bc-11",
+   "category": "banglish_credit",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "momin 700 taka baki",
+   "expected": [
+    {
+     "customer_name": "momin",
+     "amount": 700,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "momin",
+     "amount": 700,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.057
+  },
+  {
+   "id": "bc-12",
+   "category": "banglish_credit",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "nipa 2 kg peyaj 100 taka nise",
+   "expected": [
+    {
+     "customer_name": "nipa",
+     "amount": 100,
+     "type": "credit",
+     "item": "2 kg peyaj"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "nipa",
+     "amount": 100,
+     "type": "credit",
+     "item": "2 kg peyaj"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.081
+  },
+  {
+   "id": "bc-13",
+   "category": "banglish_credit",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "anwar 250 baki",
+   "expected": [
+    {
+     "customer_name": "anwar",
+     "amount": 250,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "anwar",
+     "amount": 250,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.049
+  },
+  {
+   "id": "bc-14",
+   "category": "banglish_credit",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "rubel 3 kg moshur dal 330 taka baki",
+   "expected": [
+    {
+     "customer_name": "rubel",
+     "amount": 330,
+     "type": "credit",
+     "item": "3 kg moshur dal"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "rubel",
+     "amount": 330,
+     "type": "credit",
+     "item": "3 kg moshur dal"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.135
+  },
+  {
+   "id": "bp-01",
+   "category": "banglish_payment",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "karim 500 dilo",
+   "expected": [
+    {
+     "customer_name": "karim",
+     "amount": 500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "karim",
+     "amount": 500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.049
+  },
+  {
+   "id": "bp-02",
+   "category": "banglish_payment",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "Abul 2,500 tk jama",
+   "expected": [
+    {
+     "customer_name": "Abul",
+     "amount": 2500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "Abul",
+     "amount": 2500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.055
+  },
+  {
+   "id": "bp-03",
+   "category": "banglish_payment",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "rafiq 1000 taka dilo",
+   "expected": [
+    {
+     "customer_name": "rafiq",
+     "amount": 1000,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "rafiq",
+     "amount": 1000,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.052
+  },
+  {
+   "id": "bp-04",
+   "category": "banglish_payment",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "sohel 300 joma",
+   "expected": [
+    {
+     "customer_name": "sohel",
+     "amount": 300,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "sohel",
+     "amount": 300,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.046
+  },
+  {
+   "id": "bp-05",
+   "category": "banglish_payment",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "jamal 200 taka dise",
+   "expected": [
+    {
+     "customer_name": "jamal",
+     "amount": 200,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "jamal",
+     "amount": 200,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.052
+  },
+  {
+   "id": "bp-06",
+   "category": "banglish_payment",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "mukul 1500 taka jama dilen",
+   "expected": [
+    {
+     "customer_name": "mukul",
+     "amount": 1500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "mukul",
+     "amount": 1500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.059
+  },
+  {
+   "id": "bp-07",
+   "category": "banglish_payment",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "nazmul 400 taka diyeche",
+   "expected": [
+    {
+     "customer_name": "nazmul",
+     "amount": 400,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "nazmul",
+     "amount": 400,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.054
+  },
+  {
+   "id": "bp-08",
+   "category": "banglish_payment",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "hasina 600 dilo",
+   "expected": [
+    {
+     "customer_name": "hasina",
+     "amount": 600,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "hasina",
+     "amount": 600,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.048
+  },
+  {
+   "id": "bp-09",
+   "category": "banglish_payment",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "masud 250 tk dilo",
+   "expected": [
+    {
+     "customer_name": "masud",
+     "amount": 250,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "masud",
+     "amount": 250,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.056
+  },
+  {
+   "id": "bp-10",
+   "category": "banglish_payment",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "sujon 750 taka jama korlo",
+   "expected": [
+    {
+     "customer_name": "sujon",
+     "amount": 750,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "sujon",
+     "amount": 750,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.059
+  },
+  {
+   "id": "bp-11",
+   "category": "banglish_payment",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "bappi 100 taka dilo aj",
+   "expected": [
+    {
+     "customer_name": "bappi",
+     "amount": 100,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "bappi",
+     "amount": 100,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.109
+  },
+  {
+   "id": "bp-12",
+   "category": "banglish_payment",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "tarek 900 joma dise",
+   "expected": [
+    {
+     "customer_name": "tarek",
+     "amount": 900,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "tarek",
+     "amount": 900,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.056
+  },
+  {
+   "id": "bp-13",
+   "category": "banglish_payment",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "rokon 2000 taka porishodh",
+   "expected": [
+    {
+     "customer_name": "rokon",
+     "amount": 2000,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "rokon",
+     "amount": 2000,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.054
+  },
+  {
+   "id": "bn-01",
+   "category": "bangla_script",
+   "language": "bangla",
+   "source": "eval set",
+   "text": "রহিম ২০০ টাকা দিল",
+   "expected": [
+    {
+     "customer_name": "রহিম",
+     "amount": 200,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "রহিম",
+     "amount": 200,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.067
+  },
+  {
+   "id": "bn-02",
+   "category": "bangla_script",
+   "language": "bangla",
+   "source": "eval set",
+   "text": "কামাল ভাই দেড় হাজার টাকার চাল নিলো",
+   "expected": [
+    {
+     "customer_name": "কামাল",
+     "amount": 1500,
+     "type": "credit",
+     "item": "চাল"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "কামাল",
+     "amount": 1500,
+     "type": "credit",
+     "item": "চাল"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.148
+  },
+  {
+   "id": "bn-03",
+   "category": "bangla_script",
+   "language": "bangla",
+   "source": "eval set",
+   "text": "আয়েশা আপা পাঁচশো টাকা জমা দিলেন",
+   "expected": [
+    {
+     "customer_name": "আয়েশা",
+     "amount": 500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "আয়েশা",
+     "amount": 500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.096
+  },
+  {
+   "id": "bn-04",
+   "category": "bangla_script",
+   "language": "bangla",
+   "source": "eval set",
+   "text": "জাকির ৭৫০ টাকা বাকি, সিগারেট",
+   "expected": [
+    {
+     "customer_name": "জাকির",
+     "amount": 750,
+     "type": "credit",
+     "item": "সিগারেট"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "জাকির",
+     "amount": 750,
+     "type": "credit",
+     "item": "সিগারেট"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.148
+  },
+  {
+   "id": "bn-05",
+   "category": "bangla_script",
+   "language": "bangla",
+   "source": "eval set",
+   "text": "সালমা ৩০০ টাকা বাকি",
+   "expected": [
+    {
+     "customer_name": "সালমা",
+     "amount": 300,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "সালমা",
+     "amount": 300,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.07
+  },
+  {
+   "id": "bn-06",
+   "category": "bangla_script",
+   "language": "bangla",
+   "source": "eval set",
+   "text": "করিম ১ কেজি চিনি ১৪০ টাকা নিল",
+   "expected": [
+    {
+     "customer_name": "করিম",
+     "amount": 140,
+     "type": "credit",
+     "item": "১ কেজি চিনি"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "করিম",
+     "amount": 140,
+     "type": "credit",
+     "item": "1 কেজি চিনি"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.1
+  },
+  {
+   "id": "bn-07",
+   "category": "bangla_script",
+   "language": "bangla",
+   "source": "eval set",
+   "text": "হাসান ৫০০ টাকা দিয়েছে",
+   "expected": [
+    {
+     "customer_name": "হাসান",
+     "amount": 500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "হাসান",
+     "amount": 500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.103
+  },
+  {
+   "id": "bn-08",
+   "category": "bangla_script",
+   "language": "bangla",
+   "source": "eval set",
+   "text": "রুবিনা ২ কেজি আলু ৬০ টাকা বাকি",
+   "expected": [
+    {
+     "customer_name": "রুবিনা",
+     "amount": 60,
+     "type": "credit",
+     "item": "২ কেজি আলু"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "রুবিনা",
+     "amount": 60,
+     "type": "credit",
+     "item": "2 কেজি আলু"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.104
+  },
+  {
+   "id": "bn-09",
+   "category": "bangla_script",
+   "language": "bangla",
+   "source": "eval set",
+   "text": "মিজান ১০০০ টাকা শোধ করল",
+   "expected": [
+    {
+     "customer_name": "মিজান",
+     "amount": 1000,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "মিজান",
+     "amount": 1000,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.114
+  },
+  {
+   "id": "bn-10",
+   "category": "bangla_script",
+   "language": "bangla",
+   "source": "eval set",
+   "text": "নাসির ৪৫০ টাকার ডাল আর তেল নিল",
+   "expected": [
+    {
+     "customer_name": "নাসির",
+     "amount": 450,
+     "type": "credit",
+     "item": "ডাল, তেল"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "নাসির",
+     "amount": 450,
+     "type": "credit",
+     "item": "ডাল, তেল"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.107
+  },
+  {
+   "id": "bn-11",
+   "category": "bangla_script",
+   "language": "bangla",
+   "source": "eval set",
+   "text": "শফিক ২৫০ টাকা জমা",
+   "expected": [
+    {
+     "customer_name": "শফিক",
+     "amount": 250,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "শফিক",
+     "amount": 250,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.069
+  },
+  {
+   "id": "bn-12",
+   "category": "bangla_script",
+   "language": "bangla",
+   "source": "eval set",
+   "text": "লিপি ১২০ টাকা বাকি রাখল",
+   "expected": [
+    {
+     "customer_name": "লিপি",
+     "amount": 120,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "লিপি",
+     "amount": 120,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.145
+  },
+  {
+   "id": "bn-13",
+   "category": "bangla_script",
+   "language": "bangla",
+   "source": "eval set",
+   "text": "জসিম ৮০০ টাকা দিল",
+   "expected": [
+    {
+     "customer_name": "জসিম",
+     "amount": 800,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "জসিম",
+     "amount": 800,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.064
+  },
+  {
+   "id": "bn-14",
+   "category": "bangla_script",
+   "language": "bangla",
+   "source": "eval set",
+   "text": "বাবুল ৩ টা সাবান ৯০ টাকা",
+   "expected": [
+    {
+     "customer_name": "বাবুল",
+     "amount": 90,
+     "type": "credit",
+     "item": "৩ টা সাবান"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "বাবুল",
+     "amount": 90,
+     "type": "credit",
+     "item": "3 টা সাবান"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.151
+  },
+  {
+   "id": "en-01",
+   "category": "english",
+   "language": "english",
+   "source": "eval set",
+   "text": "Mr. Hasan paid 300 taka today",
+   "expected": [
+    {
+     "customer_name": "Hasan",
+     "amount": 300,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "Hasan",
+     "amount": 300,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.136
+  },
+  {
+   "id": "en-02",
+   "category": "english",
+   "language": "english",
+   "source": "eval set",
+   "text": "Rina gave 1000 rupees",
+   "expected": [
+    {
+     "customer_name": "Rina",
+     "amount": 1000,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "Rina",
+     "amount": 1000,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.148
+  },
+  {
+   "id": "en-03",
+   "category": "english",
+   "language": "english",
+   "source": "eval set",
+   "text": "Rahim took 2 kg rice for 120 taka",
+   "expected": [
+    {
+     "customer_name": "Rahim",
+     "amount": 120,
+     "type": "credit",
+     "item": "2 kg rice"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "Rahim",
+     "amount": 120,
+     "type": "credit",
+     "item": "2 kg rice"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.276
+  },
+  {
+   "id": "en-04",
+   "category": "english",
+   "language": "english",
+   "source": "eval set",
+   "text": "Karim owes 500",
+   "expected": [
+    {
+     "customer_name": "Karim",
+     "amount": 500,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "Karim",
+     "amount": 500,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.092
+  },
+  {
+   "id": "en-05",
+   "category": "english",
+   "language": "english",
+   "source": "eval set",
+   "text": "Salma paid 250",
+   "expected": [
+    {
+     "customer_name": "Salma",
+     "amount": 250,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "Salma",
+     "amount": 250,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.085
+  },
+  {
+   "id": "en-06",
+   "category": "english",
+   "language": "english",
+   "source": "eval set",
+   "text": "Jamal bought sugar and tea worth 300 on credit",
+   "expected": [
+    {
+     "customer_name": "Jamal",
+     "amount": 300,
+     "type": "credit",
+     "item": "sugar, tea"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "Jamal",
+     "amount": 300,
+     "type": "credit",
+     "item": "bought sugar, tea, on"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": false,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": false
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.165
+  },
+  {
+   "id": "en-07",
+   "category": "english",
+   "language": "english",
+   "source": "eval set",
+   "text": "Nadia returned 400 taka",
+   "expected": [
+    {
+     "customer_name": "Nadia",
+     "amount": 400,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "Nadia",
+     "amount": 400,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.087
+  },
+  {
+   "id": "en-08",
+   "category": "english",
+   "language": "english",
+   "source": "eval set",
+   "text": "Mr Alam took 3 packets of biscuits for 90",
+   "expected": [
+    {
+     "customer_name": "Alam",
+     "amount": 90,
+     "type": "credit",
+     "item": "3 packets of biscuits"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "Alam",
+     "amount": 90,
+     "type": "credit",
+     "item": "3 packets, biscuits"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.15
+  },
+  {
+   "id": "en-09",
+   "category": "english",
+   "language": "english",
+   "source": "eval set",
+   "text": "Sumi paid back 600 taka",
+   "expected": [
+    {
+     "customer_name": "Sumi",
+     "amount": 600,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "Sumi",
+     "amount": 600,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.094
+  },
+  {
+   "id": "en-10",
+   "category": "english",
+   "language": "english",
+   "source": "eval set",
+   "text": "Put 450 on Tanvir's account for oil",
+   "expected": [
+    {
+     "customer_name": "Tanvir",
+     "amount": 450,
+     "type": "credit",
+     "item": "oil"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "Put",
+     "amount": 450,
+     "type": "credit",
+     "item": "on Tanvir s account, oil"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": false,
+   "fields": [
+    {
+     "name": false,
+     "amount": true,
+     "type": true,
+     "item": false
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.14
+  },
+  {
+   "id": "en-11",
+   "category": "english",
+   "language": "english",
+   "source": "eval set",
+   "text": "Babul paid 1200 rupees in cash",
+   "expected": [
+    {
+     "customer_name": "Babul",
+     "amount": 1200,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "Babul",
+     "amount": 1200,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.106
+  },
+  {
+   "id": "en-12",
+   "category": "english",
+   "language": "english",
+   "source": "eval set",
+   "text": "Rafi took a bag of flour, 650 taka due",
+   "expected": [
+    {
+     "customer_name": "Rafi",
+     "amount": 650,
+     "type": "credit",
+     "item": "bag of flour"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "Rafi",
+     "amount": 650,
+     "type": "credit",
+     "item": "a bag, flour"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.212
+  },
+  {
+   "id": "en-13",
+   "category": "english",
+   "language": "english",
+   "source": "eval set",
+   "text": "Shila paid 2000",
+   "expected": [
+    {
+     "customer_name": "Shila",
+     "amount": 2000,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "Shila",
+     "amount": 2000,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.108
+  },
+  {
+   "id": "mx-01",
+   "category": "code_mixed",
+   "language": "mixed",
+   "source": "eval set",
+   "text": "Nasir ২৫০ taka dise",
+   "expected": [
+    {
+     "customer_name": "Nasir",
+     "amount": 250,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "Nasir",
+     "amount": 250,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.091
+  },
+  {
+   "id": "mx-02",
+   "category": "code_mixed",
+   "language": "mixed",
+   "source": "eval set",
+   "text": "Monir bhai took 1 kg sugar for 140",
+   "expected": [
+    {
+     "customer_name": "Monir",
+     "amount": 140,
+     "type": "credit",
+     "item": "1 kg sugar"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "Monir",
+     "amount": 140,
+     "type": "credit",
+     "item": "1 kg sugar"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.137
+  },
+  {
+   "id": "mx-03",
+   "category": "code_mixed",
+   "language": "mixed",
+   "source": "eval set",
+   "text": "rahim 500 taka paid korse",
+   "expected": [
+    {
+     "customer_name": "rahim",
+     "amount": 500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "rahim",
+     "amount": 500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.106
+  },
+  {
+   "id": "mx-04",
+   "category": "code_mixed",
+   "language": "mixed",
+   "source": "eval set",
+   "text": "salma apa 300 taka due rakhlo",
+   "expected": [
+    {
+     "customer_name": "salma",
+     "amount": 300,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "salma",
+     "amount": 300,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.125
+  },
+  {
+   "id": "mx-05",
+   "category": "code_mixed",
+   "language": "mixed",
+   "source": "eval set",
+   "text": "রহিম 400 taka baki",
+   "expected": [
+    {
+     "customer_name": "রহিম",
+     "amount": 400,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "রহিম",
+     "amount": 400,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.145
+  },
+  {
+   "id": "mx-06",
+   "category": "code_mixed",
+   "language": "mixed",
+   "source": "eval set",
+   "text": "karim bhai আজ ৬০০ টাকা দিলো",
+   "expected": [
+    {
+     "customer_name": "karim",
+     "amount": 600,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "karim",
+     "amount": 600,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.146
+  },
+  {
+   "id": "mx-07",
+   "category": "code_mixed",
+   "language": "mixed",
+   "source": "eval set",
+   "text": "jasim 2 kg chicken 380 taka credit e nilo",
+   "expected": [
+    {
+     "customer_name": "jasim",
+     "amount": 380,
+     "type": "credit",
+     "item": "2 kg chicken"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "jasim",
+     "amount": 380,
+     "type": "credit",
+     "item": "2 kg chicken, e"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": false,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": false
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.155
+  },
+  {
+   "id": "mx-08",
+   "category": "code_mixed",
+   "language": "mixed",
+   "source": "eval set",
+   "text": "Tania full payment 1500 korlo",
+   "expected": [
+    {
+     "customer_name": "Tania",
+     "amount": 1500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "Tania",
+     "amount": 1500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.109
+  },
+  {
+   "id": "mx-09",
+   "category": "code_mixed",
+   "language": "mixed",
+   "source": "eval set",
+   "text": "ratul 200 taka advance dilo",
+   "expected": [
+    {
+     "customer_name": "ratul",
+     "amount": 200,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "ratul",
+     "amount": 200,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.095
+  },
+  {
+   "id": "mx-10",
+   "category": "code_mixed",
+   "language": "mixed",
+   "source": "eval set",
+   "text": "শিমুল 350 tk baki",
+   "expected": [
+    {
+     "customer_name": "শিমুল",
+     "amount": 350,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "শিমুল",
+     "amount": 350,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.113
+  },
+  {
+   "id": "mx-11",
+   "category": "code_mixed",
+   "language": "mixed",
+   "source": "eval set",
+   "text": "mamun bhai 1 bottle Coke r chips 120 baki",
+   "expected": [
+    {
+     "customer_name": "mamun",
+     "amount": 120,
+     "type": "credit",
+     "item": "1 bottle Coke, chips"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "mamun",
+     "amount": 120,
+     "type": "credit",
+     "item": "1 bottle Coke, chips"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.216
+  },
+  {
+   "id": "mx-12",
+   "category": "code_mixed",
+   "language": "mixed",
+   "source": "eval set",
+   "text": "Lucky apa paid ৮০০",
+   "expected": [
+    {
+     "customer_name": "Lucky",
+     "amount": 800,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "Lucky",
+     "amount": 800,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.097
+  },
+  {
+   "id": "nw-01",
+   "category": "number_words",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "salma apa pach sho taka baki, dal r tel",
+   "expected": [
+    {
+     "customer_name": "salma",
+     "amount": 500,
+     "type": "credit",
+     "item": "dal, tel"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "salma",
+     "amount": 500,
+     "type": "credit",
+     "item": "dal, tel"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.267
+  },
+  {
+   "id": "nw-02",
+   "category": "number_words",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "jasim kaka dedh hajar joma dilo",
+   "expected": [
+    {
+     "customer_name": "jasim",
+     "amount": 1500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "jasim",
+     "amount": 1500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.118
+  },
+  {
+   "id": "nw-03",
+   "category": "number_words",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "ruma di arai sho taka baki rakhlo, 1 packet dudh",
+   "expected": [
+    {
+     "customer_name": "ruma",
+     "amount": 250,
+     "type": "credit",
+     "item": "1 packet dudh"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "ruma",
+     "amount": 250,
+     "type": "credit",
+     "item": "1 packet dudh"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.317
+  },
+  {
+   "id": "nw-04",
+   "category": "number_words",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "shefali boudi sare tin sho taka shodh korlo",
+   "expected": [
+    {
+     "customer_name": "shefali",
+     "amount": 350,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "shefali",
+     "amount": 350,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.14
+  },
+  {
+   "id": "nw-05",
+   "category": "number_words",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "tuhin dui hajar taka nilo",
+   "expected": [
+    {
+     "customer_name": "tuhin",
+     "amount": 2000,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "tuhin",
+     "amount": 2000,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.104
+  },
+  {
+   "id": "nw-06",
+   "category": "number_words",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "babu da ek hajar pach sho baki, gas cylinder",
+   "expected": [
+    {
+     "customer_name": "babu",
+     "amount": 1500,
+     "type": "credit",
+     "item": "gas cylinder"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "babu",
+     "amount": 1500,
+     "type": "credit",
+     "item": "gas cylinder"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.333
+  },
+  {
+   "id": "nw-07",
+   "category": "number_words",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "sagor sowa sho taka baki",
+   "expected": [
+    {
+     "customer_name": "sagor",
+     "amount": 125,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "sagor",
+     "amount": 125,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.109
+  },
+  {
+   "id": "nw-08",
+   "category": "number_words",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "nila apa sare char hajar taka dilo",
+   "expected": [
+    {
+     "customer_name": "nila",
+     "amount": 4500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "nila",
+     "amount": 4500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.077
+  },
+  {
+   "id": "nw-09",
+   "category": "number_words",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "poune dui hajar taka baki rohim er",
+   "expected": [
+    {
+     "customer_name": "rohim",
+     "amount": 1750,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "got": [],
+   "outcome": "refused",
+   "detail": "no customer name",
+   "all_correct": false,
+   "fields": [
+    {
+     "name": false,
+     "amount": false,
+     "type": false,
+     "item": false
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.067
+  },
+  {
+   "id": "nw-10",
+   "category": "number_words",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "kalam bhai pachsho taka dise",
+   "expected": [
+    {
+     "customer_name": "kalam",
+     "amount": 500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "kalam",
+     "amount": 500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.066
+  },
+  {
+   "id": "nw-11",
+   "category": "number_words",
+   "language": "bangla",
+   "source": "eval set",
+   "text": "রফিক দুই হাজার টাকা নিল",
+   "expected": [
+    {
+     "customer_name": "রফিক",
+     "amount": 2000,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "রফিক",
+     "amount": 2000,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.079
+  },
+  {
+   "id": "nw-12",
+   "category": "number_words",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "shapla tin sho ponchash taka baki",
+   "expected": [
+    {
+     "customer_name": "shapla",
+     "amount": 350,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "shapla",
+     "amount": 350,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.071
+  },
+  {
+   "id": "nw-13",
+   "category": "number_words",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "mithu bish taka cha baki",
+   "expected": [
+    {
+     "customer_name": "mithu",
+     "amount": 20,
+     "type": "credit",
+     "item": "cha"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "mithu",
+     "amount": 20,
+     "type": "credit",
+     "item": "cha"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.067
+  },
+  {
+   "id": "nw-14",
+   "category": "number_words",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "dipu ek lakh taka jama dilo",
+   "expected": [
+    {
+     "customer_name": "dipu",
+     "amount": 100000,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "dipu",
+     "amount": 100000,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.106
+  },
+  {
+   "id": "nw-15",
+   "category": "number_words",
+   "language": "bangla",
+   "source": "eval set",
+   "text": "সুমি আড়াই হাজার টাকা জমা দিল",
+   "expected": [
+    {
+     "customer_name": "সুমি",
+     "amount": 2500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "সুমি",
+     "amount": 2500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.102
+  },
+  {
+   "id": "nw-16",
+   "category": "number_words",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "rina chollish taka baki",
+   "expected": [
+    {
+     "customer_name": "rina",
+     "amount": 40,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "rina",
+     "amount": 40,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.065
+  },
+  {
+   "id": "bd-01",
+   "category": "bangla_digits",
+   "language": "mixed",
+   "source": "eval set",
+   "text": "rahim ৩০০ taka baki",
+   "expected": [
+    {
+     "customer_name": "rahim",
+     "amount": 300,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "rahim",
+     "amount": 300,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.092
+  },
+  {
+   "id": "bd-02",
+   "category": "bangla_digits",
+   "language": "mixed",
+   "source": "eval set",
+   "text": "karim ১২০০ dilo",
+   "expected": [
+    {
+     "customer_name": "karim",
+     "amount": 1200,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "karim",
+     "amount": 1200,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.051
+  },
+  {
+   "id": "bd-03",
+   "category": "bangla_digits",
+   "language": "mixed",
+   "source": "eval set",
+   "text": "salma ৫ কেজি চাল ৪২৫ টাকা বাকি",
+   "expected": [
+    {
+     "customer_name": "salma",
+     "amount": 425,
+     "type": "credit",
+     "item": "৫ কেজি চাল"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "salma",
+     "amount": 425,
+     "type": "credit",
+     "item": "5 কেজি চাল"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.139
+  },
+  {
+   "id": "bd-04",
+   "category": "bangla_digits",
+   "language": "bangla",
+   "source": "eval set",
+   "text": "জসিম ১,৫০০ টাকা দিল",
+   "expected": [
+    {
+     "customer_name": "জসিম",
+     "amount": 1500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "জসিম",
+     "amount": 1500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.122
+  },
+  {
+   "id": "bd-05",
+   "category": "bangla_digits",
+   "language": "mixed",
+   "source": "eval set",
+   "text": "hasan ৯৫ tk baki",
+   "expected": [
+    {
+     "customer_name": "hasan",
+     "amount": 95,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "hasan",
+     "amount": 95,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.094
+  },
+  {
+   "id": "bd-06",
+   "category": "bangla_digits",
+   "language": "bangla",
+   "source": "eval set",
+   "text": "মনি ২ লিটার তেল ৩৮০ টাকা নিল",
+   "expected": [
+    {
+     "customer_name": "মনি",
+     "amount": 380,
+     "type": "credit",
+     "item": "২ লিটার তেল"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "মনি",
+     "amount": 380,
+     "type": "credit",
+     "item": "2 লিটার তেল"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.126
+  },
+  {
+   "id": "bd-07",
+   "category": "bangla_digits",
+   "language": "mixed",
+   "source": "eval set",
+   "text": "tanvir ২৫০০ taka jama",
+   "expected": [
+    {
+     "customer_name": "tanvir",
+     "amount": 2500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "tanvir",
+     "amount": 2500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.103
+  },
+  {
+   "id": "bd-08",
+   "category": "bangla_digits",
+   "language": "mixed",
+   "source": "eval set",
+   "text": "sabina ৬০ taka dim baki",
+   "expected": [
+    {
+     "customer_name": "sabina",
+     "amount": 60,
+     "type": "credit",
+     "item": "dim"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "sabina",
+     "amount": 60,
+     "type": "credit",
+     "item": "dim"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.164
+  },
+  {
+   "id": "bd-09",
+   "category": "bangla_digits",
+   "language": "bangla",
+   "source": "eval set",
+   "text": "রাজু ৪০০০ টাকা পরিশোধ করল",
+   "expected": [
+    {
+     "customer_name": "রাজু",
+     "amount": 4000,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "রাজু",
+     "amount": 4000,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.187
+  },
+  {
+   "id": "bd-10",
+   "category": "bangla_digits",
+   "language": "mixed",
+   "source": "eval set",
+   "text": "faruk ১০ ta dim ১২০ taka",
+   "expected": [
+    {
+     "customer_name": "faruk",
+     "amount": 120,
+     "type": "credit",
+     "item": "10 ta dim"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "faruk",
+     "amount": 120,
+     "type": "credit",
+     "item": "10 ta dim"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.138
+  },
+  {
+   "id": "bd-11",
+   "category": "bangla_digits",
+   "language": "bangla",
+   "source": "eval set",
+   "text": "লাভলী ৭৫ টাকা বাকি",
+   "expected": [
+    {
+     "customer_name": "লাভলী",
+     "amount": 75,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "লাভলী",
+     "amount": 75,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.114
+  },
+  {
+   "id": "hn-01",
+   "category": "honorifics",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "jamil bhai 400 taka baki",
+   "expected": [
+    {
+     "customer_name": "jamil",
+     "amount": 400,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "jamil",
+     "amount": 400,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.108
+  },
+  {
+   "id": "hn-02",
+   "category": "honorifics",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "rumana apa 600 joma dilen",
+   "expected": [
+    {
+     "customer_name": "rumana",
+     "amount": 600,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "rumana",
+     "amount": 600,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.071
+  },
+  {
+   "id": "hn-03",
+   "category": "honorifics",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "nirmal da 250 taka baki",
+   "expected": [
+    {
+     "customer_name": "nirmal",
+     "amount": 250,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "nirmal",
+     "amount": 250,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.065
+  },
+  {
+   "id": "hn-04",
+   "category": "honorifics",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "shampa di 180 taka dilo",
+   "expected": [
+    {
+     "customer_name": "shampa",
+     "amount": 180,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "shampa",
+     "amount": 180,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.059
+  },
+  {
+   "id": "hn-05",
+   "category": "honorifics",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "motin kaka 1200 taka nilo",
+   "expected": [
+    {
+     "customer_name": "motin",
+     "amount": 1200,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "motin",
+     "amount": 1200,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.086
+  },
+  {
+   "id": "hn-06",
+   "category": "honorifics",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "hasan mama 300 taka diye gelo",
+   "expected": [
+    {
+     "customer_name": "hasan",
+     "amount": 300,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "hasan",
+     "amount": 300,
+     "type": "credit",
+     "item": "diye gelo"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": false,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": false,
+     "item": false
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.167
+  },
+  {
+   "id": "hn-07",
+   "category": "honorifics",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "shirin bhabi 500 taka baki",
+   "expected": [
+    {
+     "customer_name": "shirin",
+     "amount": 500,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "shirin",
+     "amount": 500,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.068
+  },
+  {
+   "id": "hn-08",
+   "category": "honorifics",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "Alamgir saheb 2000 taka joma dilen",
+   "expected": [
+    {
+     "customer_name": "Alamgir",
+     "amount": 2000,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "Alamgir",
+     "amount": 2000,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.076
+  },
+  {
+   "id": "hn-09",
+   "category": "honorifics",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "ratan chacha 150 baki",
+   "expected": [
+    {
+     "customer_name": "ratan",
+     "amount": 150,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "ratan",
+     "amount": 150,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.058
+  },
+  {
+   "id": "hn-10",
+   "category": "honorifics",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "nasrin khala 350 taka dise",
+   "expected": [
+    {
+     "customer_name": "nasrin",
+     "amount": 350,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "nasrin",
+     "amount": 350,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.061
+  },
+  {
+   "id": "hn-11",
+   "category": "honorifics",
+   "language": "mixed",
+   "source": "eval set",
+   "text": "Mr. Karim 800 taka paid",
+   "expected": [
+    {
+     "customer_name": "Karim",
+     "amount": 800,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "Karim",
+     "amount": 800,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.068
+  },
+  {
+   "id": "hn-12",
+   "category": "honorifics",
+   "language": "bangla",
+   "source": "eval set",
+   "text": "মোস্তফা ভাই ৫০০ টাকা দিলেন",
+   "expected": [
+    {
+     "customer_name": "মোস্তফা",
+     "amount": 500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "মোস্তফা",
+     "amount": 500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.082
+  },
+  {
+   "id": "hn-13",
+   "category": "honorifics",
+   "language": "bangla",
+   "source": "eval set",
+   "text": "রিনা আপা ২০০ টাকা বাকি",
+   "expected": [
+    {
+     "customer_name": "রিনা",
+     "amount": 200,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "রিনা",
+     "amount": 200,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.088
+  },
+  {
+   "id": "hn-14",
+   "category": "honorifics",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "rahimbhai 300 baki",
+   "expected": [
+    {
+     "customer_name": "rahim",
+     "amount": 300,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "rahimbhai",
+     "amount": 300,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.052
+  },
+  {
+   "id": "hn-15",
+   "category": "honorifics",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "subrata dada 700 taka joma",
+   "expected": [
+    {
+     "customer_name": "subrata",
+     "amount": 700,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "subrata",
+     "amount": 700,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.077
+  },
+  {
+   "id": "it-01",
+   "category": "items",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "Shopon 5 liter tel 850 tk baki",
+   "expected": [
+    {
+     "customer_name": "Shopon",
+     "amount": 850,
+     "type": "credit",
+     "item": "5 liter tel"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "Shopon",
+     "amount": 850,
+     "type": "credit",
+     "item": "5 liter tel"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.084
+  },
+  {
+   "id": "it-02",
+   "category": "items",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "rupa 1 kg dal, 1 liter tel r 2 kg chal 420 taka baki",
+   "expected": [
+    {
+     "customer_name": "rupa",
+     "amount": 420,
+     "type": "credit",
+     "item": "1 kg dal, 1 liter tel, 2 kg chal"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "rupa",
+     "amount": 420,
+     "type": "credit",
+     "item": "1 kg dal, 1 liter tel, 2 kg chal"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.208
+  },
+  {
+   "id": "it-03",
+   "category": "items",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "akash 2 ta dim, 1 ta pauruti, 1 packet butter 210 baki",
+   "expected": [
+    {
+     "customer_name": "akash",
+     "amount": 210,
+     "type": "credit",
+     "item": "2 ta dim, 1 ta pauruti, 1 packet butter"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "akash",
+     "amount": 210,
+     "type": "credit",
+     "item": "2 ta dim, 1 ta pauruti, 1 packet butter"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.233
+  },
+  {
+   "id": "it-04",
+   "category": "items",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "sohag 1 bosta chal 2800 taka baki",
+   "expected": [
+    {
+     "customer_name": "sohag",
+     "amount": 2800,
+     "type": "credit",
+     "item": "1 bosta chal"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "sohag",
+     "amount": 2800,
+     "type": "credit",
+     "item": "1 bosta chal"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.137
+  },
+  {
+   "id": "it-05",
+   "category": "items",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "mina sabun, shampoo r toothpaste 260 taka nilo",
+   "expected": [
+    {
+     "customer_name": "mina",
+     "amount": 260,
+     "type": "credit",
+     "item": "sabun, shampoo, toothpaste"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "mina",
+     "amount": 260,
+     "type": "credit",
+     "item": "sabun, shampoo, toothpaste"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.157
+  },
+  {
+   "id": "it-06",
+   "category": "items",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "bablu 3 hali dim 150 taka baki",
+   "expected": [
+    {
+     "customer_name": "bablu",
+     "amount": 150,
+     "type": "credit",
+     "item": "3 hali dim"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "bablu",
+     "amount": 150,
+     "type": "credit",
+     "item": "3 hali dim"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.203
+  },
+  {
+   "id": "it-07",
+   "category": "items",
+   "language": "bangla",
+   "source": "eval set",
+   "text": "জামাল ২ কেজি গরুর মাংস ১৪০০ টাকা বাকি",
+   "expected": [
+    {
+     "customer_name": "জামাল",
+     "amount": 1400,
+     "type": "credit",
+     "item": "২ কেজি গরুর মাংস"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "জামাল",
+     "amount": 1400,
+     "type": "credit",
+     "item": "2 কেজি গরুর মাংস"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.124
+  },
+  {
+   "id": "it-08",
+   "category": "items",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "nayon 1 ta gas cylinder 1450 taka baki",
+   "expected": [
+    {
+     "customer_name": "nayon",
+     "amount": 1450,
+     "type": "credit",
+     "item": "1 ta gas cylinder"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "nayon",
+     "amount": 1450,
+     "type": "credit",
+     "item": "1 ta gas cylinder"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.107
+  },
+  {
+   "id": "it-09",
+   "category": "items",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "puja 500 gm ghee 450 taka nilo",
+   "expected": [
+    {
+     "customer_name": "puja",
+     "amount": 450,
+     "type": "credit",
+     "item": "500 gm ghee"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "puja",
+     "amount": 450,
+     "type": "credit",
+     "item": "500 gm ghee"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.108
+  },
+  {
+   "id": "it-10",
+   "category": "items",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "masum 2 kg alu, 1 kg peyaj 130 taka",
+   "expected": [
+    {
+     "customer_name": "masum",
+     "amount": 130,
+     "type": "credit",
+     "item": "2 kg alu, 1 kg peyaj"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "masum",
+     "amount": 130,
+     "type": "credit",
+     "item": "2 kg alu, 1 kg peyaj"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.211
+  },
+  {
+   "id": "it-11",
+   "category": "items",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "tithi baby diaper 1 packet 650 taka baki",
+   "expected": [
+    {
+     "customer_name": "tithi",
+     "amount": 650,
+     "type": "credit",
+     "item": "baby diaper 1 packet"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "tithi",
+     "amount": 650,
+     "type": "credit",
+     "item": "baby diaper 1 packet"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.103
+  },
+  {
+   "id": "it-12",
+   "category": "items",
+   "language": "bangla",
+   "source": "eval set",
+   "text": "রনি এক প্যাকেট বিস্কুট আর চা ৬০ টাকা বাকি",
+   "expected": [
+    {
+     "customer_name": "রনি",
+     "amount": 60,
+     "type": "credit",
+     "item": "এক প্যাকেট বিস্কুট, চা"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "রনি",
+     "amount": 60,
+     "type": "credit",
+     "item": "এক প্যাকেট বিস্কুট, চা"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.125
+  },
+  {
+   "id": "it-13",
+   "category": "items",
+   "language": "mixed",
+   "source": "eval set",
+   "text": "kajol 12 ta egg r 1 liter milk 260 baki",
+   "expected": [
+    {
+     "customer_name": "kajol",
+     "amount": 260,
+     "type": "credit",
+     "item": "12 ta egg, 1 liter milk"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "kajol",
+     "amount": 260,
+     "type": "credit",
+     "item": "12 ta egg, 1 liter milk"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.112
+  },
+  {
+   "id": "ty-01",
+   "category": "typos",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "rhim bhai 300 tk bki",
+   "expected": [
+    {
+     "customer_name": "rhim",
+     "amount": 300,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "rhim",
+     "amount": 300,
+     "type": "credit",
+     "item": "bki"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": false,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": false
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.1
+  },
+  {
+   "id": "ty-02",
+   "category": "typos",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "karim500dilo",
+   "expected": [
+    {
+     "customer_name": "karim",
+     "amount": 500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "karim",
+     "amount": 500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.051
+  },
+  {
+   "id": "ty-03",
+   "category": "typos",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "salma 200taka baki",
+   "expected": [
+    {
+     "customer_name": "salma",
+     "amount": 200,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "salma",
+     "amount": 200,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.055
+  },
+  {
+   "id": "ty-04",
+   "category": "typos",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "jasim 1000tk dilo",
+   "expected": [
+    {
+     "customer_name": "jasim",
+     "amount": 1000,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "jasim",
+     "amount": 1000,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.053
+  },
+  {
+   "id": "ty-05",
+   "category": "typos",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "rahim 150 bakki",
+   "expected": [
+    {
+     "customer_name": "rahim",
+     "amount": 150,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "rahim",
+     "amount": 150,
+     "type": "credit",
+     "item": "bakki"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": false,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": false
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.05
+  },
+  {
+   "id": "ty-06",
+   "category": "typos",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "Karim 400 dlo",
+   "expected": [
+    {
+     "customer_name": "Karim",
+     "amount": 400,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "Karim",
+     "amount": 400,
+     "type": "credit",
+     "item": "dlo"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": false,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": false,
+     "item": false
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.049
+  },
+  {
+   "id": "ty-07",
+   "category": "typos",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "nasir 250 tkaa jma",
+   "expected": [
+    {
+     "customer_name": "nasir",
+     "amount": 250,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "nasir",
+     "amount": 250,
+     "type": "credit",
+     "item": "tkaa jma"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": false,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": false,
+     "item": false
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.07
+  },
+  {
+   "id": "ty-08",
+   "category": "typos",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "shumon 600 tk jomaa dise",
+   "expected": [
+    {
+     "customer_name": "shumon",
+     "amount": 600,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "shumon",
+     "amount": 600,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.062
+  },
+  {
+   "id": "ty-09",
+   "category": "typos",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "pial2kg chal 140 baki",
+   "expected": [
+    {
+     "customer_name": "pial",
+     "amount": 140,
+     "type": "credit",
+     "item": "2 kg chal"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "pial",
+     "amount": 140,
+     "type": "credit",
+     "item": "2 kg chal"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.11
+  },
+  {
+   "id": "ty-10",
+   "category": "typos",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "ranu apa500 taka baki",
+   "expected": [
+    {
+     "customer_name": "ranu",
+     "amount": 500,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "ranu",
+     "amount": 500,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.067
+  },
+  {
+   "id": "ty-11",
+   "category": "typos",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "monir 300 tk shod",
+   "expected": [
+    {
+     "customer_name": "monir",
+     "amount": 300,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "monir",
+     "amount": 300,
+     "type": "credit",
+     "item": "shod"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": false,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": false,
+     "item": false
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.058
+  },
+  {
+   "id": "ty-12",
+   "category": "typos",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "babu 1,200tk joma",
+   "expected": [
+    {
+     "customer_name": "babu",
+     "amount": 1200,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "babu",
+     "amount": 1200,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.067
+  },
+  {
+   "id": "ty-13",
+   "category": "typos",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "lipi 80 taka bakii, cha",
+   "expected": [
+    {
+     "customer_name": "lipi",
+     "amount": 80,
+     "type": "credit",
+     "item": "cha"
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "lipi",
+     "amount": 80,
+     "type": "credit",
+     "item": "bakii, cha"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": false,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": false
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.113
+  },
+  {
+   "id": "ty-14",
+   "category": "typos",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "tareq 450 taka dilo dilo",
+   "expected": [
+    {
+     "customer_name": "tareq",
+     "amount": 450,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "tareq",
+     "amount": 450,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.059
+  },
+  {
+   "id": "ty-15",
+   "category": "typos",
+   "language": "bangla",
+   "source": "eval set",
+   "text": "রহিম৩০০টাকা বাকি",
+   "expected": [
+    {
+     "customer_name": "রহিম",
+     "amount": 300,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "রহিম",
+     "amount": 300,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.068
+  },
+  {
+   "id": "pp-01",
+   "category": "past_payment",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "rahim 500 taka shodh korlo",
+   "expected": [
+    {
+     "customer_name": "rahim",
+     "amount": 500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "rahim",
+     "amount": 500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.068
+  },
+  {
+   "id": "pp-02",
+   "category": "past_payment",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "karim bhai 1000 taka joma dilo",
+   "expected": [
+    {
+     "customer_name": "karim",
+     "amount": 1000,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "karim",
+     "amount": 1000,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.065
+  },
+  {
+   "id": "pp-03",
+   "category": "past_payment",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "salma 300 taka ferot dilo",
+   "expected": [
+    {
+     "customer_name": "salma",
+     "amount": 300,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "salma",
+     "amount": 300,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.066
+  },
+  {
+   "id": "pp-04",
+   "category": "past_payment",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "jamal sob baki shodh kore 2000 dilo",
+   "expected": [
+    {
+     "customer_name": "jamal",
+     "amount": 2000,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "jamal",
+     "amount": 2000,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.073
+  },
+  {
+   "id": "pp-05",
+   "category": "past_payment",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "nipa 700 taka porishodh korechhe",
+   "expected": [
+    {
+     "customer_name": "nipa",
+     "amount": 700,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "nipa",
+     "amount": 700,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.06
+  },
+  {
+   "id": "pp-06",
+   "category": "past_payment",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "habib 450 taka jama kore gelo",
+   "expected": [
+    {
+     "customer_name": "habib",
+     "amount": 450,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "habib",
+     "amount": 450,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.073
+  },
+  {
+   "id": "pp-07",
+   "category": "past_payment",
+   "language": "bangla",
+   "source": "eval set",
+   "text": "সাকিব ৮০০ টাকা শোধ করেছে",
+   "expected": [
+    {
+     "customer_name": "সাকিব",
+     "amount": 800,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "সাকিব",
+     "amount": 800,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.08
+  },
+  {
+   "id": "pp-08",
+   "category": "past_payment",
+   "language": "bangla",
+   "source": "eval set",
+   "text": "রুমা ৫০০ টাকা ফেরত দিল",
+   "expected": [
+    {
+     "customer_name": "রুমা",
+     "amount": 500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "রুমা",
+     "amount": 500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.078
+  },
+  {
+   "id": "pp-09",
+   "category": "past_payment",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "mitu ager baki theke 600 taka dilo",
+   "expected": [
+    {
+     "customer_name": "mitu",
+     "amount": 600,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "mitu",
+     "amount": 600,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.077
+  },
+  {
+   "id": "pp-10",
+   "category": "past_payment",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "sohel ager 300 taka baki chilo, aj shob dilo",
+   "expected": [
+    {
+     "customer_name": "sohel",
+     "amount": 300,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "sohel",
+     "amount": 300,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.157
+  },
+  {
+   "id": "pp-11",
+   "category": "past_payment",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "tumpa 250 taka diye gese",
+   "expected": [
+    {
+     "customer_name": "tumpa",
+     "amount": 250,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "tumpa",
+     "amount": 250,
+     "type": "credit",
+     "item": "diye gese"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": false,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": false,
+     "item": false
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.066
+  },
+  {
+   "id": "pp-12",
+   "category": "past_payment",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "kamal 1500 joma korlo",
+   "expected": [
+    {
+     "customer_name": "kamal",
+     "amount": 1500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "kamal",
+     "amount": 1500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.053
+  },
+  {
+   "id": "pp-13",
+   "category": "past_payment",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "ferdous 900 taka ferot dise",
+   "expected": [
+    {
+     "customer_name": "ferdous",
+     "amount": 900,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "ferdous",
+     "amount": 900,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.059
+  },
+  {
+   "id": "pp-14",
+   "category": "past_payment",
+   "language": "english",
+   "source": "eval set",
+   "text": "Rina already paid 400",
+   "expected": [
+    {
+     "customer_name": "Rina",
+     "amount": 400,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "Rina",
+     "amount": 400,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.096
+  },
+  {
+   "id": "me-01",
+   "category": "multi_entry",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "rahim 200 baki, karim 500 dilo",
+   "expected": [
+    {
+     "customer_name": "rahim",
+     "amount": 200,
+     "type": "credit",
+     "item": null
+    },
+    {
+     "customer_name": "karim",
+     "amount": 500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "rahim",
+     "amount": 200,
+     "type": "credit",
+     "item": null
+    },
+    {
+     "customer_name": "karim",
+     "amount": 500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    },
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.088
+  },
+  {
+   "id": "me-02",
+   "category": "multi_entry",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "rahim 200 baki, jasim 500 dilo, tanvir 100 taka baki",
+   "expected": [
+    {
+     "customer_name": "rahim",
+     "amount": 200,
+     "type": "credit",
+     "item": null
+    },
+    {
+     "customer_name": "jasim",
+     "amount": 500,
+     "type": "payment",
+     "item": null
+    },
+    {
+     "customer_name": "tanvir",
+     "amount": 100,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "rahim",
+     "amount": 200,
+     "type": "credit",
+     "item": null
+    },
+    {
+     "customer_name": "jasim",
+     "amount": 500,
+     "type": "payment",
+     "item": null
+    },
+    {
+     "customer_name": "tanvir",
+     "amount": 100,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    },
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    },
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.16
+  },
+  {
+   "id": "me-03",
+   "category": "multi_entry",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "salma 300 taka baki; rina 150 dilo",
+   "expected": [
+    {
+     "customer_name": "salma",
+     "amount": 300,
+     "type": "credit",
+     "item": null
+    },
+    {
+     "customer_name": "rina",
+     "amount": 150,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "salma",
+     "amount": 300,
+     "type": "credit",
+     "item": null
+    },
+    {
+     "customer_name": "rina",
+     "amount": 150,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    },
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.142
+  },
+  {
+   "id": "me-04",
+   "category": "multi_entry",
+   "language": "bangla",
+   "source": "eval set",
+   "text": "রহিম ২০০ টাকা বাকি, করিম ৫০০ টাকা দিল",
+   "expected": [
+    {
+     "customer_name": "রহিম",
+     "amount": 200,
+     "type": "credit",
+     "item": null
+    },
+    {
+     "customer_name": "করিম",
+     "amount": 500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "রহিম",
+     "amount": 200,
+     "type": "credit",
+     "item": null
+    },
+    {
+     "customer_name": "করিম",
+     "amount": 500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    },
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.144
+  },
+  {
+   "id": "me-05",
+   "category": "multi_entry",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "jamal 1 kg chini 140 baki, liton 300 joma",
+   "expected": [
+    {
+     "customer_name": "jamal",
+     "amount": 140,
+     "type": "credit",
+     "item": "1 kg chini"
+    },
+    {
+     "customer_name": "liton",
+     "amount": 300,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "jamal",
+     "amount": 140,
+     "type": "credit",
+     "item": "1 kg chini"
+    },
+    {
+     "customer_name": "liton",
+     "amount": 300,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    },
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.183
+  },
+  {
+   "id": "me-06",
+   "category": "multi_entry",
+   "language": "english",
+   "source": "eval set",
+   "text": "Hasan paid 500 and Rina took 200 on credit",
+   "expected": [
+    {
+     "customer_name": "Hasan",
+     "amount": 500,
+     "type": "payment",
+     "item": null
+    },
+    {
+     "customer_name": "Rina",
+     "amount": 200,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "Hasan",
+     "amount": 500,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": false,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    },
+    {
+     "name": false,
+     "amount": false,
+     "type": false,
+     "item": false
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.093
+  },
+  {
+   "id": "me-07",
+   "category": "multi_entry",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "nipa apa pach sho taka baki, mitu 200 taka dilo",
+   "expected": [
+    {
+     "customer_name": "nipa",
+     "amount": 500,
+     "type": "credit",
+     "item": null
+    },
+    {
+     "customer_name": "mitu",
+     "amount": 200,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "nipa",
+     "amount": 500,
+     "type": "credit",
+     "item": null
+    },
+    {
+     "customer_name": "mitu",
+     "amount": 200,
+     "type": "payment",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    },
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.118
+  },
+  {
+   "id": "me-08",
+   "category": "multi_entry",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "tuhin 100 r sumon 200 baki",
+   "expected": [
+    {
+     "customer_name": "tuhin",
+     "amount": 100,
+     "type": "credit",
+     "item": null
+    },
+    {
+     "customer_name": "sumon",
+     "amount": 200,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "tuhin",
+     "amount": 200,
+     "type": "credit",
+     "item": "100, sumon"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": false,
+   "fields": [
+    {
+     "name": true,
+     "amount": false,
+     "type": true,
+     "item": false
+    },
+    {
+     "name": false,
+     "amount": false,
+     "type": false,
+     "item": false
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.082
+  },
+  {
+   "id": "me-09",
+   "category": "multi_entry",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "karim 400 dilo\nsalma 250 baki",
+   "expected": [
+    {
+     "customer_name": "karim",
+     "amount": 400,
+     "type": "payment",
+     "item": null
+    },
+    {
+     "customer_name": "salma",
+     "amount": 250,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "karim",
+     "amount": 400,
+     "type": "payment",
+     "item": null
+    },
+    {
+     "customer_name": "salma",
+     "amount": 250,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    },
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.095
+  },
+  {
+   "id": "me-10",
+   "category": "multi_entry",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "babu 50, rana 70, polash 90 sob baki",
+   "expected": [
+    {
+     "customer_name": "babu",
+     "amount": 50,
+     "type": "credit",
+     "item": null
+    },
+    {
+     "customer_name": "rana",
+     "amount": 70,
+     "type": "credit",
+     "item": null
+    },
+    {
+     "customer_name": "polash",
+     "amount": 90,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "babu",
+     "amount": 50,
+     "type": "credit",
+     "item": null
+    },
+    {
+     "customer_name": "rana",
+     "amount": 70,
+     "type": "credit",
+     "item": null
+    },
+    {
+     "customer_name": "polash",
+     "amount": 90,
+     "type": "credit",
+     "item": "sob"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": false,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    },
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    },
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": false
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.118
+  },
+  {
+   "id": "me-11",
+   "category": "multi_entry",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "rahim 300 taka dilo, rahim 200 taka baki",
+   "expected": [
+    {
+     "customer_name": "rahim",
+     "amount": 300,
+     "type": "payment",
+     "item": null
+    },
+    {
+     "customer_name": "rahim",
+     "amount": 200,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "rahim",
+     "amount": 300,
+     "type": "payment",
+     "item": null
+    },
+    {
+     "customer_name": "rahim",
+     "amount": 200,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    },
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.099
+  },
+  {
+   "id": "me-12",
+   "category": "multi_entry",
+   "language": "english",
+   "source": "eval set",
+   "text": "Karim 1000 paid, Salma 600 due",
+   "expected": [
+    {
+     "customer_name": "Karim",
+     "amount": 1000,
+     "type": "payment",
+     "item": null
+    },
+    {
+     "customer_name": "Salma",
+     "amount": 600,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "got": [
+    {
+     "customer_name": "Karim",
+     "amount": 1000,
+     "type": "payment",
+     "item": null
+    },
+    {
+     "customer_name": "Salma",
+     "amount": 600,
+     "type": "credit",
+     "item": null
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": true,
+   "fields": [
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    },
+    {
+     "name": true,
+     "amount": true,
+     "type": true,
+     "item": true
+    }
+   ],
+   "extra_entries": 0,
+   "latency_ms": 0.181
+  },
+  {
+   "id": "na-01",
+   "category": "no_amount",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "rina 2 ta saban r 1 packet biscuit",
+   "expected": [],
+   "got": [],
+   "outcome": "refused",
+   "detail": "no amount",
+   "all_correct": true,
+   "fields": [],
+   "extra_entries": 0,
+   "latency_ms": 0.09
+  },
+  {
+   "id": "na-02",
+   "category": "no_amount",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "rahim bhai baki nilo",
+   "expected": [],
+   "got": [],
+   "outcome": "refused",
+   "detail": "no amount",
+   "all_correct": true,
+   "fields": [],
+   "extra_entries": 0,
+   "latency_ms": 0.045
+  },
+  {
+   "id": "na-03",
+   "category": "no_amount",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "karim taka dilo",
+   "expected": [],
+   "got": [],
+   "outcome": "refused",
+   "detail": "no amount",
+   "all_correct": true,
+   "fields": [],
+   "extra_entries": 0,
+   "latency_ms": 0.038
+  },
+  {
+   "id": "na-04",
+   "category": "no_amount",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "salma apa dal r tel nilo",
+   "expected": [],
+   "got": [],
+   "outcome": "refused",
+   "detail": "no amount",
+   "all_correct": true,
+   "fields": [],
+   "extra_entries": 0,
+   "latency_ms": 0.055
+  },
+  {
+   "id": "na-05",
+   "category": "no_amount",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "jasim kal taka dibe",
+   "expected": [],
+   "got": [],
+   "outcome": "refused",
+   "detail": "no amount",
+   "all_correct": true,
+   "fields": [],
+   "extra_entries": 0,
+   "latency_ms": 0.044
+  },
+  {
+   "id": "na-06",
+   "category": "no_amount",
+   "language": "bangla",
+   "source": "eval set",
+   "text": "রহিম চাল নিল",
+   "expected": [],
+   "got": [],
+   "outcome": "refused",
+   "detail": "no amount",
+   "all_correct": true,
+   "fields": [],
+   "extra_entries": 0,
+   "latency_ms": 0.046
+  },
+  {
+   "id": "na-07",
+   "category": "no_amount",
+   "language": "english",
+   "source": "eval set",
+   "text": "Hasan paid today",
+   "expected": [],
+   "got": [],
+   "outcome": "refused",
+   "detail": "no amount",
+   "all_correct": true,
+   "fields": [],
+   "extra_entries": 0,
+   "latency_ms": 0.037
+  },
+  {
+   "id": "na-08",
+   "category": "no_amount",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "monir 2 kg alu nilo",
+   "expected": [],
+   "got": [],
+   "outcome": "refused",
+   "detail": "no amount",
+   "all_correct": true,
+   "fields": [],
+   "extra_entries": 0,
+   "latency_ms": 0.055
+  },
+  {
+   "id": "na-09",
+   "category": "no_amount",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "sumi apa 3 ta dim baki",
+   "expected": [],
+   "got": [],
+   "outcome": "refused",
+   "detail": "no amount",
+   "all_correct": true,
+   "fields": [],
+   "extra_entries": 0,
+   "latency_ms": 0.069
+  },
+  {
+   "id": "na-10",
+   "category": "no_amount",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "kamal sob baki shodh korlo",
+   "expected": [],
+   "got": [],
+   "outcome": "refused",
+   "detail": "no amount",
+   "all_correct": true,
+   "fields": [],
+   "extra_entries": 0,
+   "latency_ms": 0.058
+  },
+  {
+   "id": "na-11",
+   "category": "no_amount",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "nasir 1 packet cigarette nilo",
+   "expected": [],
+   "got": [],
+   "outcome": "refused",
+   "detail": "no amount",
+   "all_correct": true,
+   "fields": [],
+   "extra_entries": 0,
+   "latency_ms": 0.053
+  },
+  {
+   "id": "na-12",
+   "category": "no_amount",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "tanvir er baki koto?",
+   "expected": [],
+   "got": [],
+   "outcome": "refused",
+   "detail": "no amount",
+   "all_correct": true,
+   "fields": [],
+   "extra_entries": 0,
+   "latency_ms": 0.044
+  },
+  {
+   "id": "nt-01",
+   "category": "non_transaction",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "aj dokan bondho",
+   "expected": [],
+   "got": [],
+   "outcome": "refused",
+   "detail": "no amount",
+   "all_correct": true,
+   "fields": [],
+   "extra_entries": 0,
+   "latency_ms": 0.045
+  },
+  {
+   "id": "nt-02",
+   "category": "non_transaction",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "kal theke chaler dam barbe",
+   "expected": [],
+   "got": [],
+   "outcome": "refused",
+   "detail": "no amount",
+   "all_correct": true,
+   "fields": [],
+   "extra_entries": 0,
+   "latency_ms": 0.072
+  },
+  {
+   "id": "nt-03",
+   "category": "non_transaction",
+   "language": "english",
+   "source": "eval set",
+   "text": "hello",
+   "expected": [],
+   "got": [],
+   "outcome": "refused",
+   "detail": "no amount",
+   "all_correct": true,
+   "fields": [],
+   "extra_entries": 0,
+   "latency_ms": 0.042
+  },
+  {
+   "id": "nt-04",
+   "category": "non_transaction",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "500 taka",
+   "expected": [],
+   "got": [],
+   "outcome": "refused",
+   "detail": "no customer name",
+   "all_correct": true,
+   "fields": [],
+   "extra_entries": 0,
+   "latency_ms": 0.03
+  },
+  {
+   "id": "nt-05",
+   "category": "non_transaction",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "ajke bikri valo hoyeche",
+   "expected": [],
+   "got": [],
+   "outcome": "refused",
+   "detail": "no amount",
+   "all_correct": true,
+   "fields": [],
+   "extra_entries": 0,
+   "latency_ms": 0.046
+  },
+  {
+   "id": "nt-06",
+   "category": "non_transaction",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "rahim er number 01711000000",
+   "expected": [],
+   "got": [],
+   "outcome": "invalid_output",
+   "detail": null,
+   "all_correct": true,
+   "fields": [],
+   "extra_entries": 0,
+   "latency_ms": 0.17
+  },
+  {
+   "id": "nt-07",
+   "category": "non_transaction",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "dhonnobad",
+   "expected": [],
+   "got": [],
+   "outcome": "refused",
+   "detail": "no amount",
+   "all_correct": true,
+   "fields": [],
+   "extra_entries": 0,
+   "latency_ms": 0.034
+  },
+  {
+   "id": "nt-08",
+   "category": "non_transaction",
+   "language": "bangla",
+   "source": "eval set",
+   "text": "দোকান কখন খুলবে?",
+   "expected": [],
+   "got": [],
+   "outcome": "refused",
+   "detail": "no amount",
+   "all_correct": true,
+   "fields": [],
+   "extra_entries": 0,
+   "latency_ms": 0.053
+  },
+  {
+   "id": "nt-09",
+   "category": "non_transaction",
+   "language": "english",
+   "source": "eval set",
+   "text": "Total sales today 5000",
+   "expected": [],
+   "got": [
+    {
+     "customer_name": "Total",
+     "amount": 5000,
+     "type": "credit",
+     "item": "sales"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": false,
+   "fields": [],
+   "extra_entries": 1,
+   "latency_ms": 0.062
+  },
+  {
+   "id": "nt-10",
+   "category": "non_transaction",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "chal er dam 70 taka kg",
+   "expected": [],
+   "got": [
+    {
+     "customer_name": "chal",
+     "amount": 70,
+     "type": "credit",
+     "item": "dam, kg"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": false,
+   "fields": [],
+   "extra_entries": 1,
+   "latency_ms": 0.075
+  },
+  {
+   "id": "nt-11",
+   "category": "non_transaction",
+   "language": "banglish",
+   "source": "eval set",
+   "text": "mal anar jonno 3000 taka lagbe",
+   "expected": [],
+   "got": [
+    {
+     "customer_name": "mal",
+     "amount": 3000,
+     "type": "credit",
+     "item": "anar jonno, lagbe"
+    }
+   ],
+   "outcome": "parsed",
+   "detail": null,
+   "all_correct": false,
+   "fields": [],
+   "extra_entries": 1,
+   "latency_ms": 0.074
+  },
+  {
+   "id": "nt-12",
+   "category": "non_transaction",
+   "language": "english",
+   "source": "eval set",
+   "text": "test",
+   "expected": [],
+   "got": [],
+   "outcome": "refused",
+   "detail": "no amount",
+   "all_correct": true,
+   "fields": [],
+   "extra_entries": 0,
+   "latency_ms": 0.023
+  }
+ ]
+}

@@ -144,6 +144,14 @@ const banglish = {
 
   // Confirmation card
   confirmTitle: 'Thik ache to?',
+  // The small label on a confirmation card: who read the sentence.
+  parser: {
+    readBy: 'Ke porlo:',
+    llm: 'AI',
+    rules: 'AI chhara',
+    llmTitle: (model: string) => `AI diye pora (${model})`,
+    rulesTitle: 'AI chhara, shohoj niyom diye pora',
+  },
   youWrote: 'Apni likhechen',
   save: 'Save korun',
   saving: 'Save hocche...',
@@ -199,6 +207,33 @@ const banglish = {
     saveAll: (count: number) => `Sob save korun (${count} ta)`,
     pickAll: 'Age protita hisab-er customer bachun',
     savedTitle: (count: number) => `${count} ta hisab save hoyeche!`,
+  },
+
+  // Working without internet. ("Pending", not "baki": baki means credit here.)
+  offline: {
+    online: 'Online',
+    offline: 'Offline',
+    syncing: 'Sync hocche...',
+    pendingCount: (count: number) => `${count} ta pending`,
+    statusLabel: (online: boolean, pending: number) =>
+      `${online ? 'Online' : 'Offline'}${pending ? `, ${pending} ta hisab ekhono server-e jayni` : ''}`,
+    readOnPhone:
+      'Internet nei, tai phone-ei pora hoyeche (AI chhara). Save korle phone-e thakbe, internet ele nije theke server-e jabe.',
+    readAfterNetworkError:
+      'Server-e pouchano jayni, tai phone-ei pora hoyeche (AI chhara). Save korle phone-e thakbe, internet ele nije theke jabe.',
+    cantRead: 'Internet nei, ar phone-e line-ta bujha jayni. Niche nije likhun: save korle phone-e thakbe.',
+    staleBalance: 'Balance shesh bar internet thakar shomoyer.',
+    queuedTitle: 'Phone-e save hoyeche',
+    queuedBody: 'Internet ele nije theke server-e jabe. Tokhon balance-o thik hobe.',
+    pendingTitle: (count: number) => `Ekhono server-e jayni (${count})`,
+    pendingBadge: 'Pending sync',
+    failedBadge: 'Sync hoyni',
+    syncNow: 'Ekhon pathan',
+    discard: 'Bad din',
+    discardLabel: (name: string) => `${name}-er hisab bad din`,
+    savedAt: (when: string) => `Phone-e rakha: ${when}`,
+    logoutWarning: (count: number) =>
+      `${count} ta hisab ekhono phone-e ache, server-e jayni. Logout korle-o thakbe; abar login korle internet thakle pathano hobe.`,
   },
 
   // Undo right after saving
@@ -306,6 +341,10 @@ const banglish = {
   totalBaki: 'Mot baki',
   totalBakiFrom: (count: number) => `${count} jon customer-er kache`,
   todayPayment: 'Ajker joma',
+  entrySpeed: 'Gore ekta hisab',
+  entrySpeedValue: (seconds: string) => `${seconds} second`,
+  entrySpeedDetail: (count: number) => `Shesh ${count} ta hisab-er median (likha shuru theke save porjonto)`,
+  entrySpeedNone: 'Hisab likhle ekhane dekhabe, ekta hisab likhte koto shomoy lage.',
   todayNewCredit: 'Ajker notun baki',
   weekTitle: 'Shesh 7 din',
   weekLegendCredit: 'Notun baki',

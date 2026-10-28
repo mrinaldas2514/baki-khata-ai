@@ -1,5 +1,162 @@
 # Baki Khata AI
 
+[![CI](https://github.com/mrinaldas2514/baki-khata-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/mrinaldas2514/baki-khata-ai/actions/workflows/ci.yml)
+
+**One sentence instead of a ledger page.** A shopkeeper types or says
+*"salma apa pach sho taka baki, dal r tel"*, checks a big confirmation card, and the credit is in
+the customer's khata, with the balance, reminders and a dashboard worked out for them.
+
+## The problem
+
+Millions of small shops in Bangladesh and India still keep customer credit (*baki*) in a paper
+*khata*: one page per customer, every entry by hand, balances added up in the head. Paper gets
+lost or wet, can't send a reminder, and a dispute is word against word. Existing ledger apps
+digitize the page but not the work: they want the shopkeeper to pick a customer from a list, type
+an amount into a number field, choose credit or payment and type the goods, which is four or five
+taps and fields per entry, at a busy counter, often on a cheap phone with a weak connection. Baki
+Khata AI keeps the shopkeeper's own habit instead: say or type the entry the way you'd say it, in
+Banglish, Bangla script or English, and the app turns it into a structured entry to confirm.
+
+## Key features
+
+- **One-sentence entries, typed or spoken**: an LLM (Groq, `openai/gpt-oss-120b`) reads
+  Banglish/Bangla/English and code-mixed sentences, spoken number words (*pach sho, dedh hajar,
+  sowa sho*), Bangla digits and several customers in one sentence; spoken amounts are normalized
+  by rules before the model sees them.
+- **Confirmation before saving**: a big card shows amount, Baki/Joma, item and customer, labelled
+  **AI** or **AI chhara**, with fuzzy name matching that asks when two customers fit.
+- **Works on weak or no internet**: installable PWA that opens offline; entries are read on the
+  phone by the rule-based parser and kept with *Pending sync*, then sent in order with an
+  idempotency key so nothing is saved twice.
+- **Voice**: browser speech recognition, with a server-side Whisper fallback.
+- **Khata, dashboard, reminders**: running balances, overdue (FIFO) baki, last 7 days, WhatsApp
+  reminder text, CSV export, and how long an entry takes (*Gore ekta hisab: 8 second*).
+- **Privacy**: consent at sign-up, an *AI bondho* (AI off) switch that keeps every sentence on
+  the server, logs without names or amounts, account deletion.
+- **Measured**: an evaluation of 186 labelled sentences across 14 categories, for the rules and
+  the LLM, with accuracy per field and category and p95 latency.
+- **Deploy-ready**: production mode that refuses unsafe settings, security headers, `/health`
+  with a database check, Docker + compose, Render + Vercel config, CI on every push.
+
+## Tech stack
+
+| | |
+|---|---|
+| **Backend** | Python 3.13, FastAPI, SQLAlchemy 2, Alembic, Pydantic 2, PostgreSQL (SQLite for development), argon2id + JWT, Groq SDK (LLM + Whisper), RapidFuzz |
+| **Frontend** | React 19, TypeScript, Vite, Tailwind CSS 4, Web Speech API / MediaRecorder, IndexedDB, a hand-written service worker |
+| **Quality** | pytest (737 tests, SQLite and PostgreSQL), Vitest + Testing Library (426 tests), ruff, oxlint, Prettier, axe-core audits, an LLM evaluation harness |
+| **Delivery** | Docker, docker compose, GitHub Actions, Render (API + PostgreSQL), Vercel (static PWA) |
+
+## Architecture
+
+```mermaid
+flowchart LR
+    subgraph Phone["Shopkeeper's phone (PWA)"]
+        UI["React app<br/>Hisab · Customer · Dashboard"]
+        SW["Service worker<br/>app shell cache"]
+        Rules["Rule parser (TS port)<br/>+ cached customers"]
+        Queue[("IndexedDB<br/>offline queue")]
+        UI -- offline --> Rules
+        UI -- save offline --> Queue
+        SW -. serves .-> UI
+    end
+
+    subgraph API["FastAPI backend"]
+        Parse["/parse<br/>numbers → LLM or rules → validate → match names"]
+        Confirm["/parse/confirm(-many)<br/>Idempotency-Key"]
+        Ledger["customers · transactions<br/>dashboard · reminders · export"]
+        Auth["auth · ownership · rate limits"]
+    end
+
+    DB[("PostgreSQL")]
+    Groq["Groq<br/>gpt-oss-120b · Whisper"]
+
+    UI -- "HTTPS + JWT" --> Parse
+    UI --> Confirm
+    Queue -- "sync, same key" --> Confirm
+    UI --> Ledger
+    Parse -- "AI on" --> Groq
+    Parse --> DB
+    Confirm --> DB
+    Ledger --> DB
+    Auth --> DB
+```
+
+The sentence is never saved from the model directly: `/parse` returns a preview (nothing saved),
+the shopkeeper confirms or fixes it, and `/parse/confirm` saves it with the original sentence.
+
+## Evaluation results
+
+`python -m eval.run_eval --parser both` (in `backend/`) runs 186 labelled sentences in 14
+categories through the same steps as `/parse` (see [Accuracy evaluation](#accuracy-evaluation)).
+A sentence counts as right only if every entry has the right name, amount, type and item.
+
+| Metric | Rule-based parser (AI off) | LLM (`openai/gpt-oss-120b`) |
+|---|---|---|
+| **All fields correct, per sentence** | **90.3%** (168/186) | *run `--parser llm` with a key* |
+| Customer name | 97.7% | – |
+| Amount | 97.7% | – |
+| Type (baki / joma) | 95.5% | – |
+| Item | 90.9% | – |
+| Non-transactions refused | 87.5% (21/24) | – |
+| Latency per sentence, average / p95 | 0.1 ms / 0.2 ms | – |
+
+Where the rules fall short (full list in
+[`backend/eval/results/2026-10-28_rules_rule-based.md`](backend/eval/results/2026-10-28_rules_rule-based.md)):
+typos in keywords (*dlo*, *jma*, *shod*: 60%), several customers without commas
+(*"Hasan paid 500 and Rina took 200"*: 75% for multi-entry), verbs it doesn't know (*diye gelo*),
+and sentences with a number that aren't transactions (*"chal er dam 70 taka kg"*). Those are what
+the LLM is for; the evaluation shows by how much once it's run with a key.
+
+## Design decisions and trade-offs
+
+- **Confirmation before every save.** The AI only proposes; the shopkeeper sees the amount in
+  big type and the customer before anything is written, and low-confidence readings open the
+  edit form instead. It costs one tap per entry, but a wrong baki in someone's khata costs trust,
+  and AI mistakes on names and amounts are the expensive kind.
+- **Fuzzy name matching, with "ambiguous" as an answer.** Names are matched without the AI:
+  honorifics dropped, Bangla romanized, Banglish spelling ironed out (Rohim = Rahim = রহিম). When
+  two customers fit (two Rahims), the app asks rather than guessing; when nobody fits it says
+  *Notun customer*, so nobody is created by surprise. The price is an extra tap on look-alikes.
+- **AI-off privacy mode.** *AI bondho rakhun* sends nothing to the AI provider: the server's
+  rule-based parser reads the sentences instead (90% of the evaluation set) and voice falls back
+  to the browser. Shopkeepers who don't want their customers' names leaving the shop can still
+  use the app, with lower accuracy on messy sentences, and the card says **AI chhara** so it's
+  never a surprise.
+- **Browser speech first, Whisper as fallback.** The Web Speech API is free, instant and shows
+  words while speaking, but is weaker on mixed Banglish and absent in Firefox; Groq Whisper is
+  better on names and amounts but costs money and a round trip. The app uses the browser when it
+  can and the server when it must (or when chosen), and either way the words go into the box to
+  check, never straight to save.
+- **An offline queue with idempotency keys.** Shops have bad connections, so an entry must
+  never be lost or doubled. Offline, the sentence is read on the phone by a TypeScript port of
+  the rules (checked against the Python parser on 237 sentences) and kept in IndexedDB; every save
+  carries a random key from the moment *Save* is pressed, and the server stores the answer with
+  the entry in one commit, so a retry after a lost answer is a no-op. Trade-offs: offline
+  readings are rules-only and balances shown offline are the last known ones.
+- **Provider model retirement is a config change.** Groq retires models (the old default
+  `llama-3.3-70b-versatile` went in 2026). The model is `GROQ_MODEL`; the backend checks it
+  against Groq's model list at startup and logs exactly what to change, and everything outside
+  `app/llm/` depends on a one-method `LLMClient` interface, so switching provider is one class.
+- **Balances are never stored.** They're computed from the transactions (with a window function
+  for running balances), so editing or deleting an entry can't leave a balance out of sync.
+
+## Screenshots
+
+*(Placeholders: add the images to `docs/screenshots/`.)*
+
+| Hisab: one sentence | Confirmation card | Offline: Pending sync |
+|---|---|---|
+| ![Hisab](docs/screenshots/hisab.png) | ![Confirmation](docs/screenshots/confirm.png) | ![Offline](docs/screenshots/offline.png) |
+
+| Customer khata | Dashboard | Settings (AI off) |
+|---|---|---|
+| ![Khata](docs/screenshots/khata.png) | ![Dashboard](docs/screenshots/dashboard.png) | ![Settings](docs/screenshots/settings.png) |
+
+---
+
+## What's in this repository
+
 A mobile-first app for small shopkeepers in Bangladesh and India to track customer
 credit (*baki*) by typing or speaking Banglish instead of writing in a paper ledger.
 
@@ -72,6 +229,67 @@ saved as `raw_text`.
 
 Tapping an entry in the list below the box opens that customer's khata.
 
+### Weak or no internet (offline)
+
+Shops often have a bad connection, so the app keeps working without one:
+
+- **Installable, opens offline.** It's a PWA: Chrome offers *Install app* / *Add to Home
+  screen* (manifest `frontend/public/manifest.webmanifest`, icons in `frontend/public/icons/`).
+  A service worker (`frontend/pwa/sw.js`) keeps the app's own files on the phone, so it opens at
+  once with good, weak or no internet. It never touches the API: answers with names and money
+  are not cached (the API also says `Cache-Control: no-store`).
+- **Online / Offline** in the title bar (and how many entries are still on the phone, e.g.
+  *Offline · 2 ta pending*). Screen readers hear the change.
+- **Writing an entry offline.** When the phone is offline (or `/parse` gets no answer at all),
+  the sentence is read **on the phone** by the same rule-based parser as *AI bondho*, ported to
+  TypeScript (`frontend/src/offline/rules.ts`), and matched against the shop's last customer list
+  (kept on the phone). The card says **AI chhara** and *Internet nei, tai phone-ei pora hoyeche*;
+  balances are the last known ones. If the rules can't read it, the manual form opens as usual.
+- **Saved on the phone, sent later.** *Save korun* while offline (or when the save gets no
+  answer) keeps the entry in IndexedDB: *📱 Phone-e save hoyeche*, and it appears above the
+  recent list with **⏳ Pending sync**. It's sent by itself, **in the order written**, as soon as
+  there is internet (when the phone comes back online, every 20 s while some wait, and at every
+  start; *Ekhon pathan* sends now). It keeps the time it was written (`created_at`), so the khata
+  shows when it really happened. Entries survive closing the app. *Undo* works on them too.
+- **Never saved twice.** Every save carries a random **`Idempotency-Key`** from the moment
+  *Save* is pressed, and every retry sends the same key. If a try did reach the server but its
+  answer was lost, the server answers the stored result instead of saving it again (see
+  [the API](#api)). A new customer written twice offline ("tanvir 50 baki", then "tanvir 20
+  dilo") is created once: later entries go to the customer the first one created.
+- **When the server refuses one** (say, a new customer whose name already exists), it's marked
+  *⚠ Sync hoyni* with the reason and *Bad din* to drop it; the others go on. Logging out keeps
+  waiting entries (Settings warns); deleting the account deletes them from the phone too.
+
+**Try it in Chrome DevTools:** run the app (`npm run build && npm run preview`, or Docker: the
+service worker only runs in a production build), log in once, then DevTools → **Network** →
+throttling **Offline** (or **Application → Service workers → Offline**). Reload: the app opens.
+Write `rahim 200 baki`, save: it shows *Pending sync*. Set **No throttling**: it's sent within
+a moment and appears in the recent list. **Application → IndexedDB → baki-khata → queue** shows
+what's waiting; **Slow 3G** shows the weak-connection behaviour.
+
+### Accessibility
+
+Checked on every screen (login, register, Hisab, the confirmation card for a matched, ambiguous
+and new customer, edit form, several entries, customers, khata, dashboard, settings) at **360 px
+wide** with [axe-core](https://github.com/dequelabs/axe-core) (WCAG 2.1 A/AA and best
+practices) at **100%, 150% and 200% text size** (what Android's font-size setting does to the
+page): no violations, and no sideways scrolling at any size.
+
+- **Large text**: everything is sized in `rem`, so the phone's text size scales the whole app.
+  Rows of buttons wrap one under the other when the text doesn't fit (Hisab korun + mic, Thik
+  kore din + Bad din, Baki likhun + Joma likhun, the sort buttons), the bottom tabs' labels shrink
+  a little and break as a last resort, and the chart's screen-reader table no longer widens the
+  page.
+- **The amount on the confirmation card** is as big as fits: up to 88 px (৳500, ৳1,500), smaller
+  for long amounts (৳1,25,000) so it never runs past the card, bold, in red (Baki) or green
+  (Joma) with the word next to it, so colour is never the only signal.
+- **Visible focus**: keyboard focus always shows a dark ring with a yellow halo, visible on the
+  white cards and on the green title bar.
+- **Screen readers**: every input has a label, icon buttons have names, the mic button says what
+  it's doing (`aria-pressed`, "Shunchi..."), the chart has a table version, status messages
+  (saved, offline, sync) are live regions, and the AI / AI chhara label reads "Ke porlo: AI".
+- **Contrast**: text meets AA (4.5:1) everywhere, placeholders included (`stone-500` on white).
+
 ## The screens
 
 ### Login and register
@@ -142,6 +360,12 @@ Opened with **Settings** at the top right.
 
 - Big numbers: **Mot baki** (total owed, and by how many customers), **Ajker joma** (payments
   today) and **Ajker notun baki** (new baki today).
+- **Gore ekta hisab: 8.4 second**: how long writing one entry takes, the median of the last 50
+  entries, from the first keystroke (or mic press) on the Hisab screen until it's saved. The app
+  sends that number with the save (`timing: {duration_ms, input: "typed" | "voice"}` on
+  `/parse/confirm` and `/parse/confirm-many`); the backend keeps only the number, typed/voice and
+  how many entries were saved together, per shop (`entry_timings`), never the text. Clearing
+  the box starts over; anything over an hour (the phone was put down) is ignored.
 - **Shesh 7 din**: new baki (orange) and joma (green) per day for the last 7 days. Tap a day to
   read its numbers; screen readers get the same numbers as a table.
 - **Shobcheye beshi baki**: the top 5 customers by baki.
@@ -225,6 +449,8 @@ Bangladesh's 2025 data protection rules ask for clear consent that can be withdr
   `= + - @` get a leading `'` so Excel won't run them as formulas.
 - **Account muchhe din** deletes the user, the shop, every customer and every transaction (the
   database cascades from the shop), after the password is typed again.
+- **Entry speed is numbers only**: how long an entry took, typed or spoken, and how many
+  entries, per shop. No sentence or customer is attached; it's deleted with the account.
 - **Logs carry ids, not people.** No sentence, name, phone number or amount is logged at INFO or
   above (e.g. *Saved 3 entries in shop 4*, *Registered user 7 with shop 7*); a model's broken
   answer is only logged at DEBUG. uvicorn's access log has its query strings cut off
@@ -245,9 +471,10 @@ voice says *Onek bar bola hoyeche...*).
 | `POST /transcribe` | 15 a minute | shop |
 
 The limiter (`app/rate_limit.py`) keeps counts in the server's memory: they're per process and
-reset when it restarts. Behind a proxy every request seems to come from the proxy's IP, and with
-several processes each counts on its own; in production put limits in the proxy too (e.g. nginx
-`limit_req`). Change them with the `RATE_LIMIT_*` settings.
+reset when it restarts. Behind a proxy, set `FORWARDED_ALLOW_IPS` so the real client IP is used
+(the Render blueprint does); with several processes each counts on its own, so `start.sh` runs
+one. For more, put limits in the proxy too (e.g. nginx `limit_req`). Change them with the
+`RATE_LIMIT_*` settings.
 
 ## Running it locally (macOS, step by step)
 
@@ -411,6 +638,133 @@ and point `VITE_API_URL` at a tunnel to port 8000).
 | "Ei address-e browser mic chalu korte dey na" | The page isn't on `https://` or `localhost` (see *Try it on your phone*). |
 | "Internet-e somossa, tai voice kaj korche na" | Chrome's speech recognition runs on Google's servers and needs internet. Brave blocks it: turn on *Server diye shunun* in the voice settings (needs a key). |
 
+## Running it with Docker
+
+Everything (PostgreSQL, the API and the frontend) with one command, from the repository root.
+You need [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or Docker Engine
+with the compose plugin):
+
+```bash
+docker compose up --build
+```
+
+Then open **http://localhost:8080**. For the demo login (**01700000000** / **demo1234**), in a
+second terminal:
+
+```bash
+docker compose exec backend python -m app.seed
+```
+
+- **db**: PostgreSQL 16; its data stays in the `pgdata` volume between runs.
+- **backend**: `backend/Dockerfile`, on http://localhost:8000. It runs in production mode and
+  **migrates the database at every start** (`start.sh`: `alembic upgrade head`, then uvicorn),
+  so it's the same as on a server. It waits until PostgreSQL is ready.
+- **frontend**: `frontend/Dockerfile`, the built app served by nginx (non-root, port 8080) with
+  the same caching and security headers as on Vercel (`frontend/docker/nginx.conf.template`).
+
+Settings go in a `.env` file next to `docker-compose.yml` (it's git-ignored), for example:
+
+```bash
+JWT_SECRET=paste-a-long-random-value-here   # python3 -c "import secrets; print(secrets.token_urlsafe(48))"
+GROQ_API_KEY=gsk_...                        # optional: AI parsing
+```
+
+Without `JWT_SECRET` compose uses a fixed one that is only fit for trying it on your own
+computer. Stop with Ctrl+C; `docker compose down -v` also deletes the database.
+
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on every push and pull request (the badge at the top):
+
+| Job | What it checks |
+|---|---|
+| **Backend (sqlite)** | `ruff check`, `ruff format --check`, the whole test suite on SQLite, and the evaluation with the rule-based parser |
+| **Backend (postgresql)** | the migrations on PostgreSQL (`alembic upgrade head`, `alembic check`: they build exactly the models' schema, `downgrade base`), then the whole test suite on PostgreSQL |
+| **Frontend** | `oxlint`, Prettier, the TypeScript type-check, the Vitest tests and the production build |
+| **Docker compose** | builds both images, starts PostgreSQL, the API and the frontend, and checks `/health` (database included) and that the frontend serves the app |
+
+pip and npm downloads are cached between runs (keyed on the requirements files and
+`package-lock.json`). Groq is never called: the tests use fakes.
+
+## Deploying (Render + Vercel)
+
+The backend and its PostgreSQL database run on [Render](https://render.com) (`render.yaml`, a
+"blueprint"); the frontend is a static site on [Vercel](https://vercel.com)
+(`frontend/vercel.json`). Both have free plans.
+
+### 1. Backend and database on Render
+
+1. Push this repository to GitHub. In Render: **New → Blueprint**, pick the repository. Render
+   reads `render.yaml` and proposes a web service `baki-khata-api` and a database
+   `baki-khata-db` (Singapore, the region closest to Bangladesh and India).
+2. It asks for the two values that aren't in the file: `CORS_ORIGINS` (put a placeholder like
+   `https://example.com` for now, fixed in step 3) and `GROQ_API_KEY` (optional).
+3. **Apply.** Every deploy runs `backend/start.sh`: `alembic upgrade head` first, then uvicorn.
+   A failed migration stops the deploy instead of starting on a half-migrated database. Render
+   checks `GET /health`, which also checks the database.
+4. Open `https://baki-khata-api.onrender.com/health`: `{"status": "ok", "database": "ok"}`.
+5. Optional, demo data: in the service's **Shell** tab, `python -m app.seed`.
+
+Environment variables of the **web service** (all set by the blueprint except where noted):
+
+| Variable | Value | Notes |
+|---|---|---|
+| `ENVIRONMENT` | `production` | Refuses to start without a safe `JWT_SECRET`, a PostgreSQL `DATABASE_URL` and an https `CORS_ORIGINS`, and lists what's missing. Turns off `/docs`, adds HSTS. |
+| `DATABASE_URL` | from the database | Render's `postgresql://...` URL works as it is (the backend adds the psycopg driver). |
+| `JWT_SECRET` | generated by Render | 256 random bits, made once. Changing it logs everyone out. |
+| `CORS_ORIGINS` | **you set it**: the Vercel address, e.g. `https://baki-khata.vercel.app` | Exact origins, comma-separated, `https://` only, no `*`, no trailing `/`. |
+| `GROQ_API_KEY` | **you set it** (optional) | Without it the parser is the rule-based one, and the app says "AI chhara". |
+| `GROQ_MODEL` | `openai/gpt-oss-120b` | Change here if Groq retires the model (the backend logs it at startup). |
+| `APP_TIMEZONE` | `Asia/Dhaka` | `Asia/Kolkata` for India. |
+| `FORWARDED_ALLOW_IPS` | `*` | Render's proxy is in front, so the rate limits use the client IP it forwards. |
+| `PYTHON_VERSION` | `3.13` | |
+| `PORT` | set by Render | `start.sh` listens on it. |
+
+Any other setting from [Configuration](#configuration) can be added the same way (e.g.
+`RATE_LIMIT_PARSE_PER_MINUTE`, `MAX_REQUEST_BYTES`, `PHONE_COUNTRY_CODE=91`).
+
+Free-plan notes: the web service sleeps after 15 minutes without requests (the first request
+then takes ~30-60 s; the app's offline queue covers it), and Render's free PostgreSQL databases
+expire after a few weeks unless upgraded. Run **one** instance: the rate limits are counted in
+memory per process.
+
+### 2. Frontend on Vercel
+
+1. In Vercel: **Add New → Project**, import the repository, and set **Root Directory** to
+   `frontend`. The framework (Vite), build command and output folder come from
+   `frontend/vercel.json`.
+2. Add the environment variable below, then **Deploy**.
+3. Copy the site's address (e.g. `https://baki-khata.vercel.app`) into `CORS_ORIGINS` on Render
+   (step 1.2) and let Render redeploy.
+
+| Variable | Value | Notes |
+|---|---|---|
+| `VITE_API_URL` | `https://baki-khata-api.onrender.com` | The backend's address, no trailing `/`. Read at **build** time: redeploy after changing it. |
+
+`vercel.json` sends every path to `index.html` (the app's own routing), caches `/assets/*`
+forever (their names change with every build), never caches the service worker (`/sw.js`), and
+adds security headers: a Content-Security-Policy that only lets the page load its own files and
+talk to `https://` servers, no framing, `nosniff`, and the microphone only for the app itself.
+
+### What production mode changes in the backend
+
+- **Refuses unsafe settings** at startup, listing all of them (see `ENVIRONMENT` above).
+- **Strict CORS**: only the origins in `CORS_ORIGINS`; only `GET POST PATCH DELETE` and the
+  headers the app sends (`Authorization`, `Content-Type`, `Idempotency-Key`).
+- **Security headers** on every answer: `X-Content-Type-Options: nosniff`, `X-Frame-Options:
+  DENY`, `Referrer-Policy: no-referrer`, a `Content-Security-Policy` that allows nothing (the
+  API only serves JSON), `Cache-Control: no-store` (answers hold names and money: no browser,
+  proxy or service worker keeps them), and `Strict-Transport-Security` in production.
+- **No debug output**: `/docs`, `/redoc` and `/openapi.json` are off; an unexpected error answers
+  `500 {"detail": "Something went wrong on the server. Please try again."}` and is logged with
+  its traceback, never sent; database errors never include the values (SQLAlchemy
+  `hide_parameters`), so a failed insert can't put a customer's name in the logs.
+- **Request size limits**: bodies over `MAX_REQUEST_BYTES` (128 KB) get `413`, except
+  `POST /transcribe`, which may be `STT_MAX_AUDIO_BYTES` + 64 KB. Bodies without a
+  `Content-Length` are counted as they arrive.
+- **`GET /health`** runs `SELECT 1`: `200 {"status": "ok", "database": "ok"}`, or `503
+  {"status": "error", "database": "unreachable"}`, which tells Render to restart or hold the deploy.
+
 ## Project structure
 
 ```
@@ -424,26 +778,33 @@ backend/
 │   ├── rate_limit.py    # in-memory rate limiter (login, register, parse, transcribe)
 │   ├── privacy.py       # the privacy note's version, and where its promises are kept
 │   ├── logging_privacy.py # keeps query strings (names) out of the access log
-│   ├── groq_models.py   # startup check: logs a clear error if Groq rejects a configured model
+│   ├── groq_models.py   # startup check: logs a clear error if Groq doesn't serve a configured model
+│   ├── http_security.py # security headers and the request body size limit (middleware)
 │   ├── time_utils.py    # UTC / shop-local-time helpers
 │   ├── llm/             # LLM interface, Groq client, rule-based demo parser
 │   ├── stt/             # speech-to-text interface and the Groq Whisper client
-│   ├── models/          # SQLAlchemy tables: Shop, User, RevokedToken, Customer, Transaction
+│   ├── models/          # SQLAlchemy tables: Shop, User, RevokedToken, Customer, Transaction,
+│   │                    #   EntryTiming (entry speed), IdempotencyKey
 │   ├── schemas/         # Pydantic request/response models and validation
 │   ├── routers/         # HTTP endpoints (thin, just call services)
 │   └── services/        # Business logic (auth, balance, customers, transactions, dashboard,
 │                        #   reminders, parsing, parse_prompt, number_words, name_matching,
-│                        #   transcription, phones, export)
-├── migrations/          # Alembic: env.py and versions/ (0001 initial schema, 0002 accounts)
+│                        #   transcription, phones, export, entry_speed, idempotency)
+├── migrations/          # Alembic: env.py and versions/ (0001 initial schema, 0002 accounts,
+│                        #   0003 entry timings, 0004 idempotency keys)
+├── eval/                # accuracy evaluation: run_eval.py, data/sentences.json (186),
+│                        #   results/, my_sentences.template.csv, rules_parity.py (README inside)
+├── start.sh             # server start: alembic upgrade head, then uvicorn (Render, Docker)
+├── Dockerfile
 ├── alembic.ini
 ├── tests/               # pytest suite (the LLM and speech-to-text are always faked)
 │   └── fixtures/eval_sentences.json   # example sentences + expected output
 ├── app/seed.py          # demo shop: python -m app.seed
 ├── requirements.txt
 ├── requirements-dev.txt
-├── pyproject.toml       # pytest config
+├── pyproject.toml       # pytest and ruff config
 └── .env.example
-frontend/                # React + Vite + TypeScript + Tailwind
+frontend/                # React + Vite + TypeScript + Tailwind, an installable PWA
 ├── src/
 │   ├── App.tsx          # the shell: login while logged out; title bar, screen, bottom tabs
 │   ├── session.ts       # who is logged in (token + user), kept in localStorage
@@ -461,8 +822,20 @@ frontend/                # React + Vite + TypeScript + Tailwind
 │   │                    #   BottomNav, TransactionForm, CustomerForm, ReminderSheet,
 │   │                    #   SavedMessage (with Undo), WeekChart, Dialog...
 │   ├── voice/           # speech engines (browser / server), useVoiceInput, voice settings
+│   ├── offline/         # rules.ts (the rule parser in TypeScript) + rulesParity.json,
+│   │                    #   localPreview, queue (IndexedDB, sync, Idempotency-Key),
+│   │                    #   customerCache, store, online
+│   ├── entrySpeed.ts    # first keystroke / mic press → saved timer
 │   └── test/            # test setup, the fetch mock and the speech API mocks
+├── pwa/sw.js            # the service worker (vite.config.ts fills in the file list)
+├── public/              # manifest.webmanifest, icons/, favicon
+├── docker/              # nginx config for the Docker image
+├── vercel.json          # Vercel: SPA routing, caching, security headers
+├── Dockerfile
 └── .env.example
+docker-compose.yml       # PostgreSQL + API + frontend: docker compose up --build
+render.yaml              # Render blueprint: API + PostgreSQL
+.github/workflows/ci.yml # CI: lint, tests (SQLite + PostgreSQL), build, docker compose smoke test
 ```
 
 ## Data model
@@ -480,6 +853,7 @@ revoked_tokens (logged-out logins, until they would have expired)
 | **shops** | `id`, `name`, `owner_name`, `created_at` |
 | **customers** | `id`, `shop_id`, `name`, `phone` (optional), `note` (optional area/note), `created_at` |
 | **transactions** | `id`, `shop_id`, `customer_id`, `type` (`credit` \| `payment`), `amount`, `item` (optional), `raw_text` (optional), `created_at` |
+| **entry_timings** | `id`, `shop_id`, `duration_ms`, `input_method` (`typed` \| `voice`), `entry_count`, `created_at`: the dashboard's entry speed, numbers only |
 
 - **`type`**: `credit` means the customer took goods on baki. `payment` means the customer paid money.
 - **`amount`**: a whole number of taka, always greater than 0 (also enforced by a database
@@ -563,8 +937,8 @@ customer or transaction of another shop) answers **404**, exactly like one that 
 | DELETE | `/shops/{shop_id}/transactions/{transaction_id}` | Delete a transaction (204) |
 | GET | `/shops/{shop_id}/dashboard?overdue_days=30` | Total outstanding, today's collection and new baki, top 5, overdue customers, and `last_7_days` (`date`, `credit`, `payment` per local day, oldest first) |
 | POST | `/shops/{shop_id}/parse` | Turn one free-form sentence into a transaction **preview** (saves nothing); `entries` has one item per customer |
-| POST | `/shops/{shop_id}/parse/confirm` | Save the confirmed preview, creating the customer if new |
-| POST | `/shops/{shop_id}/parse/confirm-many` | Save several confirmed entries together (`{"entries": [...]}`, 1–10), all or none |
+| POST | `/shops/{shop_id}/parse/confirm` | Save the confirmed preview, creating the customer if new. Optional `Idempotency-Key` header (see below) |
+| POST | `/shops/{shop_id}/parse/confirm-many` | Save several confirmed entries together (`{"entries": [...]}`, 1–10), all or none. Optional `Idempotency-Key` header |
 | POST | `/transcribe` | A short voice recording (multipart `file`, optional `language`) → `{"text": "..."}` (saves nothing). `403` when the user turned AI off |
 | GET | `/transcribe/status` | Whether server-side transcription can be used (not without a key, not with AI off), and its size/length limits |
 
@@ -646,7 +1020,7 @@ Don't commit `.env`; it's already in `.gitignore`.
 | `DATABASE_URL` | `sqlite:///./baki_khata.db` | Database connection |
 | `APP_TIMEZONE` | `Asia/Dhaka` | Decides what "today" means (`Asia/Kolkata` for India) |
 | `APP_NAME` | `Baki Khata AI` | Shown in the API docs |
-| `ENVIRONMENT` | `development` | `production` makes the backend refuse to start without `JWT_SECRET` |
+| `ENVIRONMENT` | `development` | `production`: refuses to start without `JWT_SECRET`, a PostgreSQL `DATABASE_URL` and https `CORS_ORIGINS`; no `/docs`; HSTS (see [Deploying](#what-production-mode-changes-in-the-backend)) |
 | `JWT_SECRET` | *(empty)* | Signs login tokens; a long random value (≥ 32 characters). Empty outside production: a random one per start |
 | `JWT_EXPIRE_MINUTES` | `10080` | How long a login lasts (7 days) |
 | `RATE_LIMIT_ENABLED` | `true` | Switch the rate limits off (e.g. load tests) |
@@ -655,7 +1029,9 @@ Don't commit `.env`; it's already in `.gitignore`.
 | `RATE_LIMIT_PARSE_PER_MINUTE` | `30` | `/parse` calls per minute, per shop |
 | `RATE_LIMIT_TRANSCRIBE_PER_MINUTE` | `15` | `/transcribe` calls per minute, per shop |
 | `SQL_ECHO` | `false` | Log SQL statements |
-| `CORS_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | Comma-separated browser origins allowed to call the API (the frontend) |
+| `CORS_ORIGINS` | *(empty)*: `http://localhost:5173,http://127.0.0.1:5173` outside production | Comma-separated browser origins allowed to call the API (the frontend). Required in production, `https://` only |
+| `MAX_REQUEST_BYTES` | `131072` | Largest request body (128 KB); `/transcribe` may be `STT_MAX_AUDIO_BYTES` + 64 KB |
+| `FORWARDED_ALLOW_IPS` | `127.0.0.1` | Read by uvicorn (`start.sh`): proxies whose `X-Forwarded-For` is trusted. `*` behind Render's proxy |
 | `LLM_PROVIDER` | `auto` | `auto`: Groq when `GROQ_API_KEY` is set, otherwise the rule-based demo parser. `groq`: always Groq (503 without a key). `fake`: always the demo parser |
 | `GROQ_API_KEY` | *(empty)* | Groq API key for AI parsing |
 | `GROQ_MODEL` | `openai/gpt-oss-120b` | Groq chat model for parsing and reminder wording; must support JSON mode |
@@ -667,15 +1043,17 @@ Don't commit `.env`; it's already in `.gitignore`.
 
 ### Switching to PostgreSQL
 
-No code changes are needed:
+No code changes are needed (the driver, psycopg, is in `requirements.txt`):
 
 ```bash
-pip install "psycopg[binary]"
 # in .env
-DATABASE_URL=postgresql+psycopg://user:password@localhost:5432/baki_khata
+DATABASE_URL=postgresql://user:password@localhost:5432/baki_khata
 # then, as always
 alembic upgrade head
 ```
+
+`postgres://` and `postgresql://` URLs get the psycopg driver automatically. Or run everything,
+PostgreSQL included, with [Docker](#running-it-with-docker).
 
 ### Frontend configuration
 
@@ -693,8 +1071,8 @@ it from an old `frontend/.env`.)
 With `LLM_PROVIDER=fake`, or `auto` and no `GROQ_API_KEY`, `/parse` uses a small rule-based
 parser (`app/llm/rule_based.py`) instead of the AI. It plugs in behind the same `LLMClient`
 interface, so number normalization, validation, the sanity check and customer name matching all
-run exactly as with the real model. It's good enough to demo the app (it gets the 20 evaluation
-sentences right): the name is the first word, the amount is the number next to "taka" (or the
+run exactly as with the real model. It's good enough to demo the app (it reads 90% of the 186
+evaluation sentences fully right, see [Evaluation results](#evaluation-results)): the name is the first word, the amount is the number next to "taka" (or the
 one that isn't a quantity like "2 kg"), and the type comes from words like baki/nilo vs.
 dilo/joma/shodh. Anything less regular needs the real model; the backend logs a warning at the
 first parse so it's clear which one is running.
@@ -713,20 +1091,22 @@ first parse so it's clear which one is running.
    `openai/gpt-oss-120b` is a reasoning model; the backend asks it for low reasoning effort,
    which is plenty for one sentence and keeps parsing fast.
 3. **If Groq retires a model** (as it did `llama-3.3-70b-versatile`, the old default, in 2026):
-   at startup the backend asks Groq about `GROQ_MODEL` and `GROQ_STT_MODEL` and logs an error
-   such as
+   at startup the backend asks Groq for the list of models it serves and checks that
+   `GROQ_MODEL` and `GROQ_STT_MODEL` are in it. If one isn't, it logs an error such as
 
    ```
-   Groq rejected GROQ_MODEL='llama-3.3-70b-versatile': The model `llama-3.3-70b-versatile` has
-   been decommissioned and is no longer supported. The model may have been retired or misspelled.
-   Set GROQ_MODEL in backend/.env to a current model from https://console.groq.com/docs/models
-   and restart the backend.
+   Groq rejected GROQ_MODEL='llama-3.3-70b-versatile': The model `llama-3.3-70b-versatile` is
+   not in the list of models Groq serves to this API key. The model may have been retired or
+   misspelled. Set GROQ_MODEL in backend/.env to a current model from
+   https://console.groq.com/docs/models and restart the backend.
    ```
 
-   The same message is logged if a request fails later because of the model. Change the setting
-   in `backend/.env` and restart. The check runs in the background and never stops the backend
-   from starting (no internet only gives a warning). Check
-   https://console.groq.com/docs/deprecations from time to time.
+   (Ids with a slash, like `openai/gpt-oss-120b`, are looked up in that list. Asking Groq for one
+   model by id doesn't work for them: the SDK escapes the slash in the URL and Groq answers
+   "The model `openai%2Fgpt-oss-120b` does not exist".) A similar message is logged if a request
+   fails later because of the model. Change the setting in `backend/.env` and restart. The check
+   runs in the background and never stops the backend from starting (no internet only gives a
+   warning). Check https://console.groq.com/docs/deprecations from time to time.
 4. Restart `uvicorn` and try it:
 
    ```bash
@@ -854,6 +1234,7 @@ before the model sees them. Bangla digits (`২০০` → `200`), thousands sep
 | arai sho / আড়াই শো | 250 | arai = 2.5 × |
 | sare tin sho / সাড়ে তিন শো | 350 | sare N = N + ½ |
 | poune dui hajar | 1750 | poune N = N − ¼ |
+| sowa sho / সোয়া শো, sowa tin sho | 125, 325 | sowa = 1.25 ×; sowa N = N + ¼ |
 | ek hajar pach sho ponchash taka | 1550 | groups add up |
 | bish taka / five hundred taka | 20 / 500 | number word before taka/tk/টাকা |
 
@@ -929,9 +1310,16 @@ tell two Rahims apart.
     "candidates": [{"id": 1, "name": "Rahim", "score": 100, "...": "..."}],
     "suggested_name": "Rahim"
   },
-  "warnings": []
+  "warnings": [],
+  "parser": "llm",
+  "model": "openai/gpt-oss-120b"
 }
 ```
+
+`parser` says who read the sentence: `"llm"` (the AI model named in `model`) or `"rules"` (the
+rule-based parser, `model: "rule-based"`: AI turned off in Settings, or no `GROQ_API_KEY` on the
+server). The confirmation card shows it as a small **AI** or **AI chhara** label, with the model
+name on hover, so nobody mistakes a rules reading for the AI's.
 
 For a sentence about several customers, `entries` holds one `{parsed, match, warnings}` per
 customer, in the order written; the top-level `parsed`, `match` and `warnings` are always the
@@ -956,6 +1344,13 @@ same order. One commit: if any entry fails (another shop's customer, a name clas
 saved. Two entries for the same new customer ("tanvir 50 baki, tanvir 20 dilo") create them once.
 Each result's balance is the customer's balance after all of them.
 
+**Idempotency-Key** (both confirm endpoints): a random key per save, 8–100 of `A-Z a-z 0-9 _ . : -`
+(the app uses a UUID). The answer is stored with the shop and key in the same commit as the
+entries (`idempotency_keys`). Sending the same save again with the key answers the stored result
+(`201`, header `Idempotent-Replayed: true`) and saves nothing; the same key with different data
+is `409`. Two requests racing with one key save once (the unique key stops the second at its
+commit). A failed save doesn't use the key up. Keys are forgotten after 30 days.
+
 **Errors**: `422` the sentence has no name/amount, or invalid input; `502` the model gave an
 invalid answer twice; `503` `LLM_PROVIDER=groq` without a `GROQ_API_KEY`, or Groq is
 unreachable / rejected the request (details are logged, not returned).
@@ -967,28 +1362,54 @@ Everything outside `app/llm/` depends only on the `LLMClient` interface in
 add a class with that method and return it from `build_llm_client()` in
 `app/llm/__init__.py` (that's how the rule-based demo parser plugs in too).
 
-### Evaluation sentences
+### Accuracy evaluation
 
-`backend/tests/fixtures/eval_sentences.json` holds 20 varied sentences (Banglish, Bangla
-script, English, mixed; credit and payment; number words, Bangla digits, honorifics, several
-items) with the expected output. The test suite checks that the file is well formed and that
-the deterministic steps agree with it. The plan is to grow it and add a script that runs it
-against the real model to measure accuracy.
+`backend/eval/` measures how well each parser reads shopkeeper sentences: 186 labelled
+sentences in 14 categories (Banglish/Bangla/English/code-mixed, credit and payment, number
+words, Bangla digits, honorifics, items, typos and missing spaces, past-tense payments, several
+entries in one sentence, no amount, not a transaction), plus any real ones you add in
+`backend/eval/my_sentences.csv`. In `backend/`:
+
+```bash
+python -m eval.run_eval --parser rules   # rule-based parser, no key needed
+python -m eval.run_eval --parser llm     # the AI model (GROQ_API_KEY in backend/.env)
+python -m eval.run_eval --parser both    # both, with a side-by-side comparison
+```
+
+It reports accuracy per field and for whole sentences, per category and language, average and
+p95 latency, and every failure, as Markdown and JSON in `backend/eval/results/`. See
+[backend/eval/README.md](backend/eval/README.md) for how answers are scored and how to add
+real sentences. (`tests/fixtures/eval_sentences.json`, the first 20 sentences, is still used by
+unit tests; all of them are in the evaluation set too.)
 
 ## Running the tests
 
 ```bash
 cd backend
-pytest
+pytest              # 737 tests
+ruff check . && ruff format --check .
 ```
 
 ```bash
 cd frontend
-npm test            # Vitest + React Testing Library (npm run test:watch to re-run on save)
+npm test            # Vitest + React Testing Library, 426 tests (npm run test:watch to re-run on save)
 npm run typecheck   # TypeScript
 npm run lint        # oxlint
 npm run format      # Prettier
 ```
+
+CI runs all of it on every push (see [Continuous integration](#continuous-integration)).
+
+**Added in this round:** the Groq model check with ids that contain a slash
+(`test_groq_models.py`), which parser read a sentence (`test_parse_api.py`, `test_privacy.py`),
+the evaluation's data, scoring, CSV and reports with no real API (`test_eval.py`, plus a floor
+under the rule parser's accuracy), entry speed (`test_entry_speed.py`), production mode,
+security headers, size limits and `/health` (`test_production.py`), idempotency keys including
+two requests racing (`test_idempotency.py`), and that the browser's copy of the rules is up to
+date (`test_rules_parity.py`). In the frontend: the AI / AI chhara label, entry timing
+(`src/EntrySpeed.test.tsx`), the rule parser's 237 parity cases (`src/offline/rules.test.ts`),
+the queue's order, retries, refusals and created customers (`src/offline/queue.test.ts`), and the
+whole offline flow on the Hisab screen (`src/Offline.test.tsx`, with a fake IndexedDB).
 
 The backend tests cover (besides the parsing, balances, dashboard, reminders and voice from
 before): migrations (`test_migrations.py`: `upgrade head` equals the models, downgrade, the app
@@ -1030,10 +1451,20 @@ TEST_DATABASE_URL=postgresql+psycopg://user:password@localhost:5432/baki_test py
 
 ## Next steps (not built yet)
 
+- **Run the LLM evaluation** with a key (`python -m eval.run_eval --parser both` in `backend/`),
+  commit `backend/eval/results/`, and put the numbers in [Evaluation results](#evaluation-results).
+  Then add real shopkeeper sentences in `backend/eval/my_sentences.csv`.
+- **Fill in the screenshots** (`docs/screenshots/`, see [Screenshots](#screenshots)).
+- **Offline is rules-only**: entries written offline are read by the rule-based parser; re-reading
+  pending entries with the AI when the connection is back (before the shopkeeper confirms) would
+  need the confirmation to move to after sync.
+- **Offline balances** are the last ones known; pending entries aren't added to them yet.
+- A **Content-Security-Policy** listing the exact API origin on Vercel (today `connect-src` allows
+  any `https:` origin, since the API's address is a build setting).
+
 - **Password reset** (by SMS code or email). Today a forgotten password means a new account.
 - **Change password / phone** in Settings, and see where you're logged in ("log out everywhere").
-- **Shared rate limits** (Redis, or the proxy) for more than one server process, and the real
-  client IP from `X-Forwarded-For` behind a trusted proxy.
+- **Shared rate limits** (Redis, or the proxy) for more than one server process.
 - **An `HttpOnly` cookie for the login** instead of `localStorage` (with CSRF protection), and
   shorter tokens with a refresh token.
 - **Link shops from before accounts** to a user (a small admin script); they have no login now.
@@ -1044,6 +1475,4 @@ TEST_DATABASE_URL=postgresql+psycopg://user:password@localhost:5432/baki_test py
 - Measure voice accuracy: a few recorded Banglish sentences run through both engines and
   `/parse`, to choose the default engine and Whisper model with numbers
 - A Bangla-script / English switch for the UI (all texts are in `frontend/src/strings.ts`)
-- An accuracy script that runs `eval_sentences.json` against the real model
 - Store the AI's original parse next to the confirmed values, to measure how often shopkeepers correct it
-- Offline support (queue entries while the phone has no internet)

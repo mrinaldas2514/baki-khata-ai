@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Customer, Transaction, TransactionType
 from app.schemas import CustomerBalanceSummary, Dashboard, DaySummary, OverdueCustomer
+from app.services import entry_speed
 from app.services.balance import get_owed_since, get_shop_balances
 from app.services.shops import get_shop
 from app.time_utils import local_day_bounds
@@ -36,6 +37,7 @@ def get_dashboard(
         overdue_days=overdue_days,
         overdue_customers=_overdue_customers(db, customers, owing, now, overdue_days),
         last_7_days=last_days,
+        entry_speed=entry_speed.recent_speed(db, shop_id),
     )
 
 
@@ -56,9 +58,7 @@ def _summary(customer: Customer, balance: int) -> CustomerBalanceSummary:
     )
 
 
-def _daily_totals(
-    db: Session, shop_id: int, now: datetime, local_tz: ZoneInfo
-) -> list[DaySummary]:
+def _daily_totals(db: Session, shop_id: int, now: datetime, local_tz: ZoneInfo) -> list[DaySummary]:
     """New baki and joma for each of the last CHART_DAYS local days, oldest first, ending today.
 
     Days are the shop's local calendar days (APP_TIMEZONE), the same as "today's collection".
