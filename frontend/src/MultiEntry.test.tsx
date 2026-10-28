@@ -71,6 +71,7 @@ describe('several customers in one sentence', () => {
     expect(second).toHaveTextContent(strings.typePayment)
     expect(within(third).getByTestId('customer-summary')).toHaveTextContent(strings.newCustomerNamed('Salma'))
     expect(third).toHaveTextContent('Jinis: dal')
+    for (const each of cards()) expect(within(each).getByTestId('parser-label')).toHaveTextContent(strings.parser.llm)
 
     const save = screen.getByRole('button', { name: strings.multi.pickAll })
     expect(save).toBeDisabled()

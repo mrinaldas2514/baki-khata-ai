@@ -36,6 +36,26 @@ function card() {
   return screen.getByRole('region', { name: strings.confirmTitle })
 }
 
+describe('who read the sentence', () => {
+  it('labels an AI reading "AI", with the model name on hover', async () => {
+    mockApi({ [RECENT]: { body: [] }, [PARSE]: { body: preview({}) } })
+    await submit('salma apa pach sho taka baki, dal r tel')
+
+    const label = within(await screen.findByRole('region', { name: strings.confirmTitle })).getByTestId('parser-label')
+    expect(label).toHaveTextContent(strings.parser.llm)
+    expect(label).toHaveAttribute('title', strings.parser.llmTitle('openai/gpt-oss-120b'))
+  })
+
+  it('labels the rule-based parser "AI chhara"', async () => {
+    mockApi({ [RECENT]: { body: [] }, [PARSE]: { body: preview({ parser: 'rules' }) } })
+    await submit('salma apa pach sho taka baki, dal r tel')
+
+    const label = within(await screen.findByRole('region', { name: strings.confirmTitle })).getByTestId('parser-label')
+    expect(label).toHaveTextContent(strings.parser.rules)
+    expect(label).toHaveAttribute('title', strings.parser.rulesTitle)
+  })
+})
+
 describe('matched customer', () => {
   const matched = preview({
     match: { status: 'exact', customer: candidate(salma), candidates: [candidate(salma)], suggested_name: 'Salma' },

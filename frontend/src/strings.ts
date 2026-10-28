@@ -144,6 +144,14 @@ const banglish = {
 
   // Confirmation card
   confirmTitle: 'Thik ache to?',
+  // The small label on a confirmation card: who read the sentence.
+  parser: {
+    readBy: 'Ke porlo:',
+    llm: 'AI',
+    rules: 'AI chhara',
+    llmTitle: (model: string) => `AI diye pora (${model})`,
+    rulesTitle: 'AI chhara, shohoj niyom diye pora',
+  },
   youWrote: 'Apni likhechen',
   save: 'Save korun',
   saving: 'Save hocche...',

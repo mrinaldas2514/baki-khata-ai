@@ -2,6 +2,9 @@
 
 from typing import Literal, Protocol, TypedDict
 
+# Which kind of parser read a sentence: a language model, or the simple rules (AI off / no key).
+ParserKind = Literal["llm", "rules"]
+
 
 class ChatMessage(TypedDict):
     role: Literal["system", "user", "assistant"]
@@ -9,6 +12,11 @@ class ChatMessage(TypedDict):
 
 
 class LLMClient(Protocol):
+    # Shown with every parse result ("AI" / "AI chhara" on the confirmation card).
+    parser: ParserKind
+    # The provider's model id, e.g. "openai/gpt-oss-120b" ("rule-based" for the rules).
+    model: str
+
     def complete_json(self, messages: list[ChatMessage]) -> str:
         """Send a chat and return the model's reply, which should be a single JSON object.
 

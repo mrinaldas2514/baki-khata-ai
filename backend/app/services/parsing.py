@@ -170,6 +170,8 @@ def preview(db: Session, llm: LLMClient, shop_id: int, raw_text: str) -> ParsePr
         match=first.match,
         warnings=first.warnings,
         entries=entries,
+        parser=llm.parser,
+        model=llm.model,
     )
 
 

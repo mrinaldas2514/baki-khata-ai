@@ -33,6 +33,8 @@ from app.services.number_words import normalize_numbers
 from app.services.parse_prompt import sentence_from_user_prompt
 
 MAX_ITEM_LENGTH = 200
+# The "model" name reported for parses done by these rules.
+RULES_MODEL = "rule-based"
 
 
 def _nfc_set(*words: str) -> frozenset[str]:
@@ -96,6 +98,9 @@ class _Token:
 
 class RuleBasedLLMClient:
     """LLMClient that parses with simple rules instead of calling a model."""
+
+    parser = "rules"
+    model = RULES_MODEL
 
     def complete_json(self, messages: list[ChatMessage]) -> str:
         first_user = next(m["content"] for m in messages if m["role"] == "user")

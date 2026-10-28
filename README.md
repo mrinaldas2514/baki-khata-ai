@@ -931,9 +931,16 @@ tell two Rahims apart.
     "candidates": [{"id": 1, "name": "Rahim", "score": 100, "...": "..."}],
     "suggested_name": "Rahim"
   },
-  "warnings": []
+  "warnings": [],
+  "parser": "llm",
+  "model": "openai/gpt-oss-120b"
 }
 ```
+
+`parser` says who read the sentence: `"llm"` (the AI model named in `model`) or `"rules"` (the
+rule-based parser, `model: "rule-based"`: AI turned off in Settings, or no `GROQ_API_KEY` on the
+server). The confirmation card shows it as a small **AI** or **AI chhara** label, with the model
+name on hover, so nobody mistakes a rules reading for the AI's.
 
 For a sentence about several customers, `entries` holds one `{parsed, match, warnings}` per
 customer, in the order written; the top-level `parsed`, `match` and `warnings` are always the

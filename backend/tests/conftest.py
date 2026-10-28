@@ -59,6 +59,9 @@ class FakeLLM:
     Queue answers with `reply(...)`: a dict is sent as JSON, a str as-is, an exception is raised.
     """
 
+    parser = "llm"
+    model = "fake-llm"
+
     def __init__(self) -> None:
         self.answers: list[object] = []
         self.calls: list[list[dict]] = []

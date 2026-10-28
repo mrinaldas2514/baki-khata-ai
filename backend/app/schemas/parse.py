@@ -2,6 +2,7 @@ from typing import Annotated
 
 from pydantic import BaseModel, BeforeValidator, Field, StringConstraints, model_validator
 
+from app.llm.base import ParserKind
 from app.models import TransactionType
 from app.schemas.common import Amount, Name, PastDateTime, ShortText
 from app.schemas.customer import CustomerCreate, CustomerRead
@@ -64,6 +65,11 @@ class ParsePreview(EntryPreview):
 
     raw_text: str
     entries: list[EntryPreview] = Field(description="Every entry, in the order written")
+    parser: ParserKind = Field(
+        description='"llm": read by the AI model. "rules": read by the simple rule-based parser '
+        "(AI turned off in Settings, or no AI key on the server)."
+    )
+    model: str = Field(description='The model id, e.g. "openai/gpt-oss-120b", or "rule-based"')
 
 
 class ParseConfirm(BaseModel):

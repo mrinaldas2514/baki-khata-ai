@@ -1,5 +1,5 @@
 import { type AnchorHTMLAttributes, type ComponentProps, type ReactNode, useState } from 'react'
-import type { TransactionType } from '../api/types'
+import type { ParserKind, TransactionType } from '../api/types'
 import { strings } from '../strings'
 import { TYPE_STYLES } from '../typeStyles'
 
@@ -58,6 +58,23 @@ export function Alert({ tone = 'error', children }: { tone?: keyof typeof ALERT_
     >
       {children}
     </div>
+  )
+}
+
+/** "AI" or "AI chhara": who read the sentence on a confirmation card. */
+export function ParserLabel({ parser, model }: { parser: ParserKind; model: string }) {
+  const isLlm = parser === 'llm'
+  return (
+    <span
+      title={isLlm ? strings.parser.llmTitle(model) : strings.parser.rulesTitle}
+      data-testid="parser-label"
+      className={`inline-flex shrink-0 items-center rounded-full border px-2.5 py-0.5 text-sm font-semibold ${
+        isLlm ? 'border-violet-300 bg-violet-50 text-violet-900' : 'border-stone-300 bg-stone-100 text-stone-800'
+      }`}
+    >
+      <span className="sr-only">{strings.parser.readBy} </span>
+      {isLlm ? strings.parser.llm : strings.parser.rules}
+    </span>
   )
 }
 

@@ -18,6 +18,7 @@ import {
   EMPTY_FORM,
   type FormValues,
   type MultiItem,
+  type ReadBy,
   toConfirmRequest,
   toDraft,
   toMultiItems,
@@ -45,7 +46,7 @@ type Step =
   | { kind: 'idle' }
   | { kind: 'parsing' }
   | { kind: 'confirm'; preview: ParsePreview }
-  | { kind: 'multi'; rawText: string; items: MultiItem[] }
+  | { kind: 'multi'; rawText: string; items: MultiItem[]; readBy: ReadBy }
   | {
       kind: 'form'
       rawText: string
@@ -136,7 +137,12 @@ export function HisabScreen({ active, aiEnabled = true }: { active: boolean; aiE
     try {
       const preview = await api.parse(sentence)
       if (preview.entries && preview.entries.length > 1) {
-        goTo({ kind: 'multi', rawText: preview.raw_text, items: toMultiItems(preview.entries) })
+        goTo({
+          kind: 'multi',
+          rawText: preview.raw_text,
+          items: toMultiItems(preview.entries),
+          readBy: { parser: preview.parser, model: preview.model },
+        })
       } else if (preview.parsed.confidence < LOW_CONFIDENCE) {
         // Not sure enough to show as a confirmation: let the shopkeeper check every field.
         goTo(formFromPreview(preview, null, strings.errors.lowConfidence))
@@ -298,6 +304,7 @@ export function HisabScreen({ active, aiEnabled = true }: { active: boolean; aiE
         <MultiConfirm
           rawText={step.rawText}
           items={step.items}
+          readBy={step.readBy}
           onChange={(items) => (items.length ? setStep({ ...step, items }) : goTo({ kind: 'idle' }))}
           onSaveAll={() => handleSaveAll(step.rawText, step.items)}
           onCancel={() => goTo({ kind: 'idle' })}

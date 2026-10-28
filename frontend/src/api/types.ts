@@ -89,10 +89,16 @@ export interface EntryPreview {
   warnings: string[]
 }
 
+/** Who read the sentence: the AI model, or the simple rules (AI off, or no AI key on the server). */
+export type ParserKind = 'llm' | 'rules'
+
 /** `parsed`/`match`/`warnings` are the first entry; `entries` has all of them (usually one). */
 export interface ParsePreview extends EntryPreview {
   raw_text: string
   entries?: EntryPreview[]
+  parser: ParserKind
+  /** e.g. "openai/gpt-oss-120b", or "rule-based". */
+  model: string
 }
 
 export interface Transaction {

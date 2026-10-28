@@ -5,7 +5,7 @@ import { formatTaka } from '../format'
 import { strings } from '../strings'
 import { TYPE_STYLES } from '../typeStyles'
 import { CustomerOption, CustomerSummary, NewCustomerOption } from './CustomerSummary'
-import { Alert, Button, TypeBadge } from './ui'
+import { Alert, Button, ParserLabel, TypeBadge } from './ui'
 
 interface Props {
   preview: ParsePreview
@@ -26,9 +26,12 @@ export function ConfirmationCard({ preview, onSave, onEdit, onCancel, saving = f
   return (
     <section aria-labelledby="confirm-title" className="flex flex-col gap-4 rounded-3xl bg-white p-4 shadow-md">
       <div>
-        <h2 id="confirm-title" className="text-2xl font-bold text-stone-900">
-          {strings.confirmTitle}
-        </h2>
+        <div className="flex items-start justify-between gap-3">
+          <h2 id="confirm-title" className="text-2xl font-bold text-stone-900">
+            {strings.confirmTitle}
+          </h2>
+          <ParserLabel parser={preview.parser} model={preview.model} />
+        </div>
         <p className="text-base text-stone-600">
           {strings.youWrote}: “{preview.raw_text}”
         </p>
