@@ -71,8 +71,8 @@ export interface CustomerCandidate extends Customer {
 
 export type MatchStatus = 'exact' | 'fuzzy' | 'ambiguous' | 'new'
 
-export interface ParsePreview {
-  raw_text: string
+/** One entry the sentence was understood as: what, and for whom. */
+export interface EntryPreview {
   parsed: {
     customer_name: string
     amount: number
@@ -87,6 +87,12 @@ export interface ParsePreview {
     suggested_name: string
   }
   warnings: string[]
+}
+
+/** `parsed`/`match`/`warnings` are the first entry; `entries` has all of them (usually one). */
+export interface ParsePreview extends EntryPreview {
+  raw_text: string
+  entries?: EntryPreview[]
 }
 
 export interface Transaction {
@@ -179,6 +185,10 @@ export interface ParseConfirm {
   item: string | null
   customer_id?: number
   new_customer?: { name: string; note?: string | null }
+}
+
+export interface ParseConfirmManyResult {
+  results: ParseConfirmResult[]
 }
 
 export interface ParseConfirmResult {

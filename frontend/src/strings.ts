@@ -189,6 +189,27 @@ const banglish = {
   amountInvalid: 'Shothik taka likhun (1 theke 1 koti)',
   nameRequired: 'Customer-er naam likhun',
 
+  // Several customers in one sentence
+  multi: {
+    title: (count: number) => `${count} ta hisab bujhechi`,
+    hint: 'Protita dekhe nin. Bhul thakle "Thik kore din", dorkar na hole "Bad din".',
+    entryLabel: (n: number, name: string) => `Hisab ${n}: ${name}`,
+    editTitle: (n: number) => `Hisab ${n} thik kore din`,
+    remove: 'Bad din',
+    saveAll: (count: number) => `Sob save korun (${count} ta)`,
+    pickAll: 'Age protita hisab-er customer bachun',
+    savedTitle: (count: number) => `${count} ta hisab save hoyeche!`,
+  },
+
+  // Undo right after saving
+  undo: {
+    button: (seconds: number) => `Bhul hoyeche? Undo (${seconds})`,
+    label: 'Bhul hoyeche? Undo',
+    undoing: 'Undo hocche...',
+    done: 'Undo hoyeche. Line-ta abar box-e ache: thik kore abar "Hisab korun" chapun.',
+    failed: 'Undo hoyni. Customer-er khata theke hisab-ta muche din.',
+  },
+
   // After saving
   savedTitle: 'Save hoyeche!',
   savedNewCustomer: (name: string) => `Notun customer ${name} jog hoyeche.`,
@@ -324,6 +345,7 @@ const banglish = {
     micLanguage: 'Ei browser ei bhasha bujhe na. Voice setting-e onno bhasha bachun.',
     micServerOff: 'Server-e voice chalu nei. Browser diye bolun, ba likhe din.',
     micTooLong: 'Onek lomba hoye geche. Chhoto kore ek line-e abar bolun.',
+    micTooMany: 'Onek bar bola hoyeche. Ek minute por abar bolun, ba ekhon likhe din.',
     micFailed: 'Voice bujhte pareni. Abar bolun, ba likhe din.',
   },
 }

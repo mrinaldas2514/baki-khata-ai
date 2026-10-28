@@ -8,6 +8,7 @@ import type {
   CustomerListItem,
   Dashboard,
   ParseConfirm,
+  ParseConfirmManyResult,
   ParseConfirmResult,
   ParsePreview,
   RecentTransaction,
@@ -127,6 +128,13 @@ export const api = {
   /** Save a (possibly edited) entry, creating the customer if it's new. */
   confirm: (data: ParseConfirm) =>
     request<ParseConfirmResult>(`${shopPath()}/parse/confirm`, { method: 'POST', body: JSON.stringify(data) }),
+
+  /** Save every entry of a sentence about several customers, all together (or none). */
+  confirmMany: (entries: ParseConfirm[]) =>
+    request<ParseConfirmManyResult>(`${shopPath()}/parse/confirm-many`, {
+      method: 'POST',
+      body: JSON.stringify({ entries }),
+    }),
 
   recentTransactions: (limit = 10) => request<RecentTransaction[]>(`${shopPath()}/transactions?limit=${limit}`),
 

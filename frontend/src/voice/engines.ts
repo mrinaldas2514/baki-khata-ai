@@ -18,6 +18,7 @@ export type VoiceErrorCode =
   | 'language' // the browser can't recognize the chosen language
   | 'server-off' // the backend has no speech-to-text key (503)
   | 'too-long' // the server refused the recording as too big or long (413)
+  | 'too-many' // too many recordings in a short time (429)
   | 'failed' // anything else
 
 export interface VoiceHandlers {
@@ -126,6 +127,7 @@ export function serverErrorCode(error: unknown): VoiceErrorCode {
   // 403: the shopkeeper turned AI off, so voice isn't sent to the server either.
   if (error.status === 503 || error.status === 403) return 'server-off'
   if (error.status === 413) return 'too-long'
+  if (error.status === 429) return 'too-many'
   return 'failed'
 }
 

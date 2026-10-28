@@ -73,6 +73,7 @@ const VOICE_ERRORS: Record<VoiceErrorCode, string> = {
   language: strings.errors.micLanguage,
   'server-off': strings.errors.micServerOff,
   'too-long': strings.errors.micTooLong,
+  'too-many': strings.errors.micTooMany,
   failed: strings.errors.micFailed,
 }
 

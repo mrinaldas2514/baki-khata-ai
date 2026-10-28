@@ -14,6 +14,12 @@ It handles the common shapes well and nothing more:
 The name is the first word (plus a capitalized surname), the amount is the number next to
 "taka" (or else the number that isn't a quantity like "2 kg"), and the type comes from
 keywords. Use the real model for anything less regular.
+
+Several entries in one sentence are split at commas, semicolons and new lines, but only when
+every part is a whole entry with its own name and amount:
+
+    "rahim 200 baki, karim 500 dilo"   -> two entries
+    "salma 500 taka baki, dal r tel"    -> one entry ("dal r tel" has no name or amount)
 """
 
 import json
@@ -63,6 +69,8 @@ _FILLER = _nfc_set(
 
 # "৳" sits inside the Bangla Unicode block, so it is matched before Bangla letters.
 _TOKEN_RE = re.compile(r"৳|\d+|[A-Za-zঀ-৲৴-৿]+|[,;/.]")
+_ENTRY_SEPARATOR_RE = re.compile(r"[,;\n]")
+MAX_ENTRIES = 10
 
 
 @dataclass
@@ -91,7 +99,18 @@ class RuleBasedLLMClient:
 
     def complete_json(self, messages: list[ChatMessage]) -> str:
         first_user = next(m["content"] for m in messages if m["role"] == "user")
-        return json.dumps(parse_sentence(sentence_from_user_prompt(first_user)), ensure_ascii=False)
+        return json.dumps(parse_text(sentence_from_user_prompt(first_user)), ensure_ascii=False)
+
+
+def parse_text(sentence: str) -> dict:
+    """The whole sentence: one entry, or {"entries": [...]} when it lists several customers."""
+    # Numbers first, so "2,500" isn't split at its comma.
+    parts = [p for p in _ENTRY_SEPARATOR_RE.split(normalize_numbers(sentence)) if p.strip()]
+    if 1 < len(parts) <= MAX_ENTRIES:
+        entries = [parse_sentence(part) for part in parts]
+        if all("error" not in entry for entry in entries):
+            return {"entries": entries}
+    return parse_sentence(sentence)
 
 
 def parse_sentence(sentence: str) -> dict:

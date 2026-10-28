@@ -1,9 +1,9 @@
 """Free-form sentence -> transaction preview -> (after the shopkeeper confirms) saved transaction.
 
-    text --normalize numbers--> LLM --validate (retry once)--> ParsedTransaction
+    text --normalize numbers--> LLM --validate (retry once)--> ParsedTransaction (one or more)
          --sanity checks + customer name matching--> ParsePreview
 
-Nothing is written to the database until `confirm` is called.
+Nothing is written to the database until `confirm` (or `confirm_many`) is called.
 """
 
 import json
@@ -13,16 +13,21 @@ from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.llm import ChatMessage, LLMClient
+from app.models import Customer
 from app.schemas import (
     CustomerCandidate,
     CustomerMatchResult,
     CustomerRead,
+    EntryPreview,
     ParseConfirm,
+    ParseConfirmMany,
+    ParseConfirmManyResult,
     ParseConfirmResult,
     ParsedTransaction,
     ParsePreview,
     TransactionCreate,
 )
+from app.schemas.parse import MAX_ENTRIES
 from app.services import customers as customer_service
 from app.services import transactions as transaction_service
 from app.services.name_matching import MatchStatus, clean_name, match_name
@@ -45,6 +50,11 @@ class NotATransactionError(Exception):
 
 
 def parse_with_llm(llm: LLMClient, raw_text: str) -> ParsedTransaction:
+    """The sentence's (first) entry. See `parse_entries_with_llm`."""
+    return parse_entries_with_llm(llm, raw_text)[0]
+
+
+def parse_entries_with_llm(llm: LLMClient, raw_text: str) -> list[ParsedTransaction]:
     """Ask the model, validate its JSON, and retry once (telling it what was wrong)."""
     messages: list[ChatMessage] = [
         {"role": "system", "content": SYSTEM_PROMPT},
@@ -70,15 +80,27 @@ def parse_with_llm(llm: LLMClient, raw_text: str) -> ParsedTransaction:
     )
 
 
-def _validate(answer: str) -> ParsedTransaction:
+def _validate(answer: str) -> list[ParsedTransaction]:
     data = json.loads(_strip_code_fence(answer))
     if not isinstance(data, dict):
         raise ValueError("expected a JSON object")
-    if data.get("error") and data.get("amount") is None:
+    if data.get("error") and data.get("amount") is None and not data.get("entries"):
         raise NotATransactionError(
             f"Could not find a transaction in this sentence: {data['error']}"
         )
-    return ParsedTransaction.model_validate(data)
+    if "entries" not in data:
+        # A single entry without the list around it: fine too.
+        return [ParsedTransaction.model_validate(data)]
+    entries = data["entries"]
+    if not isinstance(entries, list) or not 1 <= len(entries) <= MAX_ENTRIES:
+        raise ValueError(f"entries must be a list of 1 to {MAX_ENTRIES} objects")
+    parsed = []
+    for i, entry in enumerate(entries):
+        try:
+            parsed.append(ParsedTransaction.model_validate(entry))
+        except ValidationError as exc:
+            raise ValueError(f"entries.{i}: {_describe(exc)}") from exc
+    return parsed
 
 
 def _strip_code_fence(answer: str) -> str:
@@ -130,35 +152,70 @@ def _match_customer(db: Session, shop_id: int, name: str) -> CustomerMatchResult
 
 
 def preview(db: Session, llm: LLMClient, shop_id: int, raw_text: str) -> ParsePreview:
-    """Parse the sentence and find the customer. Saves nothing."""
+    """Parse the sentence and find each entry's customer. Saves nothing."""
     get_shop(db, shop_id)  # 404 before spending an LLM call
-    parsed, warnings = _sanity_check(raw_text, parse_with_llm(llm, raw_text))
-    match = _match_customer(db, shop_id, parsed.customer_name)
-    if match.status == MatchStatus.FUZZY:
-        warnings.append(
-            f"'{parsed.customer_name}' was matched to {match.customer.name}. Please check it."
-        )
-    return ParsePreview(raw_text=raw_text, parsed=parsed, match=match, warnings=warnings)
+    entries = []
+    for parsed in parse_entries_with_llm(llm, raw_text):
+        parsed, warnings = _sanity_check(raw_text, parsed)
+        match = _match_customer(db, shop_id, parsed.customer_name)
+        if match.status == MatchStatus.FUZZY:
+            warnings.append(
+                f"'{parsed.customer_name}' was matched to {match.customer.name}. Please check it."
+            )
+        entries.append(EntryPreview(parsed=parsed, match=match, warnings=warnings))
+    first = entries[0]
+    return ParsePreview(
+        raw_text=raw_text,
+        parsed=first.parsed,
+        match=first.match,
+        warnings=first.warnings,
+        entries=entries,
+    )
 
 
 def confirm(db: Session, shop_id: int, data: ParseConfirm) -> ParseConfirmResult:
     """Save the confirmed entry, creating the customer first if needed, in one commit."""
-    if data.customer_id is not None:
-        customer = customer_service.get_customer(db, shop_id, data.customer_id)
-    else:
-        customer = customer_service.add_customer(db, shop_id, data.new_customer)
-    txn_data = TransactionCreate(
-        type=data.type,
-        amount=data.amount,
-        item=data.item,
-        raw_text=data.raw_text,
-        created_at=data.created_at,
-    )
-    txn = transaction_service.add_transaction(db, customer, txn_data)
+    return confirm_many(db, shop_id, ParseConfirmMany(entries=[data])).results[0]
+
+
+def confirm_many(db: Session, shop_id: int, data: ParseConfirmMany) -> ParseConfirmManyResult:
+    """Save several confirmed entries in one commit: all of them, or (on any error) none.
+
+    Two entries for the same new customer ("tanvir 50 baki, tanvir 20 dilo") create them once.
+    """
+    created: dict[tuple[str, str], Customer] = {}
+    saved = []
+    for entry in data.entries:
+        is_new = False
+        if entry.customer_id is not None:
+            customer = customer_service.get_customer(db, shop_id, entry.customer_id)
+        else:
+            new = entry.new_customer
+            key = (new.name.lower(), (new.note or "").lower())
+            customer = created.get(key)
+            if customer is None:
+                customer = customer_service.add_customer(db, shop_id, new)
+                created[key] = customer
+                is_new = True
+        txn_data = TransactionCreate(
+            type=entry.type,
+            amount=entry.amount,
+            item=entry.item,
+            raw_text=entry.raw_text,
+            created_at=entry.created_at,
+        )
+        txn = transaction_service.add_transaction(db, customer, txn_data)
+        saved.append((txn, customer, is_new))
     db.commit()
-    transaction = transaction_service.with_balance(db, txn)
-    return ParseConfirmResult(
-        transaction=transaction,
-        customer=customer_service.to_customer_read(customer, transaction.customer_balance),
-        customer_created=data.new_customer is not None,
-    )
+    results = []
+    for txn, customer, is_new in saved:
+        transaction = transaction_service.with_balance(db, txn)
+        results.append(
+            ParseConfirmResult(
+                transaction=transaction,
+                customer=customer_service.to_customer_read(customer, transaction.customer_balance),
+                customer_created=is_new,
+            )
+        )
+    logger.info("Saved %d entries in shop %d", len(results), shop_id)
+    return ParseConfirmManyResult(results=results)

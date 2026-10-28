@@ -1,4 +1,4 @@
-import type { Customer, ParseConfirm, ParsePreview, TransactionType } from './api/types'
+import type { Customer, EntryPreview, ParseConfirm, TransactionType } from './api/types'
 
 /** Who the entry is for: someone already in the khata, or a customer to create on save. */
 export type CustomerChoice =
@@ -24,7 +24,7 @@ export interface FormValues {
 
 export const EMPTY_FORM: FormValues = { name: '', choice: null, amount: null, type: 'credit', item: null }
 
-export function initialChoice(preview: ParsePreview): CustomerChoice | null {
+export function initialChoice(preview: EntryPreview): CustomerChoice | null {
   const { match } = preview
   if ((match.status === 'exact' || match.status === 'fuzzy') && match.customer) {
     return { kind: 'existing', customer: match.customer }
@@ -38,4 +38,33 @@ export function toConfirmRequest(rawText: string, draft: Draft): ParseConfirm {
   return draft.choice.kind === 'existing'
     ? { ...base, customer_id: draft.choice.customer.id }
     : { ...base, new_customer: { name: draft.choice.name, note: draft.choice.note || null } }
+}
+
+/** One card of a sentence about several customers, as the shopkeeper has it now. */
+export interface MultiItem {
+  key: number
+  /** What the AI understood (for the customer candidates and the suggested name). */
+  entry: EntryPreview
+  amount: number
+  type: Draft['type']
+  item: string | null
+  /** Null until the shopkeeper picks between look-alikes. */
+  choice: CustomerChoice | null
+  editing: boolean
+}
+
+export function toMultiItems(entries: EntryPreview[]): MultiItem[] {
+  return entries.map((entry, key) => ({
+    key,
+    entry,
+    amount: entry.parsed.amount,
+    type: entry.parsed.type,
+    item: entry.parsed.item,
+    choice: initialChoice(entry),
+    editing: false,
+  }))
+}
+
+export function toDraft(item: MultiItem): Draft | null {
+  return item.choice && { choice: item.choice, amount: item.amount, type: item.type, item: item.item }
 }

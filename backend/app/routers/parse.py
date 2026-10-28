@@ -7,7 +7,14 @@ from app.auth import CurrentUser, require_shop_owner
 from app.database import get_db
 from app.llm import parsing_llm_client
 from app.rate_limit import check_rate
-from app.schemas import ParseConfirm, ParseConfirmResult, ParsePreview, ParseRequest
+from app.schemas import (
+    ParseConfirm,
+    ParseConfirmMany,
+    ParseConfirmManyResult,
+    ParseConfirmResult,
+    ParsePreview,
+    ParseRequest,
+)
 from app.services import parsing as service
 
 router = APIRouter(
@@ -32,3 +39,11 @@ def parse_text(request: Request, shop_id: int, data: ParseRequest, db: DB, user:
 def confirm_parsed(shop_id: int, data: ParseConfirm, db: DB):
     """Save the confirmed (possibly edited) preview, creating the customer if new."""
     return service.confirm(db, shop_id, data)
+
+
+@router.post(
+    "/confirm-many", response_model=ParseConfirmManyResult, status_code=status.HTTP_201_CREATED
+)
+def confirm_many(shop_id: int, data: ParseConfirmMany, db: DB):
+    """Save every entry of a sentence about several customers, together (all or nothing)."""
+    return service.confirm_many(db, shop_id, data)

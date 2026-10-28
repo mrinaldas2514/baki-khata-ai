@@ -88,6 +88,8 @@ export const DELETE_ME = 'DELETE /auth/me'
 export const EXPORT = 'GET /shops/1/export.csv'
 export const CREATE_CUSTOMER = 'POST /shops/1/customers'
 export const customerKey = (id: number) => `PATCH /shops/1/customers/${id}`
+export const deleteCustomerKey = (id: number) => `DELETE /shops/1/customers/${id}`
+export const CONFIRM_MANY = 'POST /shops/1/parse/confirm-many'
 
 export function customer(id: number, name: string, balance: number, note: string | null = null): Customer {
   return { id, shop_id: 1, name, phone: null, note, created_at: NOW, balance }
