@@ -1,4 +1,5 @@
 import { API_URL } from '../config'
+import type { EntryTiming } from '../entrySpeed'
 import { currentShopId, endSession, getSession } from '../session'
 import type {
   AuthResult,
@@ -125,15 +126,18 @@ export const api = {
   parse: (text: string) =>
     request<ParsePreview>(`${shopPath()}/parse`, { method: 'POST', body: JSON.stringify({ text }) }),
 
-  /** Save a (possibly edited) entry, creating the customer if it's new. */
-  confirm: (data: ParseConfirm) =>
-    request<ParseConfirmResult>(`${shopPath()}/parse/confirm`, { method: 'POST', body: JSON.stringify(data) }),
+  /** Save a (possibly edited) entry, creating the customer if it's new. `timing`: entry speed. */
+  confirm: (data: ParseConfirm, timing?: EntryTiming) =>
+    request<ParseConfirmResult>(`${shopPath()}/parse/confirm`, {
+      method: 'POST',
+      body: JSON.stringify({ ...data, timing }),
+    }),
 
   /** Save every entry of a sentence about several customers, all together (or none). */
-  confirmMany: (entries: ParseConfirm[]) =>
+  confirmMany: (entries: ParseConfirm[], timing?: EntryTiming) =>
     request<ParseConfirmManyResult>(`${shopPath()}/parse/confirm-many`, {
       method: 'POST',
-      body: JSON.stringify({ entries }),
+      body: JSON.stringify({ entries, timing }),
     }),
 
   recentTransactions: (limit = 10) => request<RecentTransaction[]>(`${shopPath()}/transactions?limit=${limit}`),

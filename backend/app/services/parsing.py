@@ -29,6 +29,7 @@ from app.schemas import (
 )
 from app.schemas.parse import MAX_ENTRIES
 from app.services import customers as customer_service
+from app.services import entry_speed
 from app.services import transactions as transaction_service
 from app.services.name_matching import MatchStatus, clean_name, match_name
 from app.services.number_words import normalize_numbers, numbers_in
@@ -177,7 +178,8 @@ def preview(db: Session, llm: LLMClient, shop_id: int, raw_text: str) -> ParsePr
 
 def confirm(db: Session, shop_id: int, data: ParseConfirm) -> ParseConfirmResult:
     """Save the confirmed entry, creating the customer first if needed, in one commit."""
-    return confirm_many(db, shop_id, ParseConfirmMany(entries=[data])).results[0]
+    many = ParseConfirmMany(entries=[data], timing=data.timing)
+    return confirm_many(db, shop_id, many).results[0]
 
 
 def confirm_many(db: Session, shop_id: int, data: ParseConfirmMany) -> ParseConfirmManyResult:
@@ -208,6 +210,8 @@ def confirm_many(db: Session, shop_id: int, data: ParseConfirmMany) -> ParseConf
         )
         txn = transaction_service.add_transaction(db, customer, txn_data)
         saved.append((txn, customer, is_new))
+    if data.timing is not None:
+        entry_speed.record(db, shop_id, data.timing, entry_count=len(saved))
     db.commit()
     results = []
     for txn, customer, is_new in saved:

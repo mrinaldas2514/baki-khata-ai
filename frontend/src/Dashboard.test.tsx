@@ -37,6 +37,7 @@ const DATA: Dashboard = {
     { date: '2026-10-26', credit: 120, payment: 1000 },
     { date: '2026-10-27', credit: 320, payment: 1500 },
   ],
+  entry_speed: { median_seconds: 8.4, samples: 50 },
 }
 
 function openDashboard(data: Dashboard = DATA) {
@@ -53,6 +54,18 @@ describe('dashboard', () => {
     expect(screen.getByTestId('stat-total')).toHaveTextContent(strings.totalBakiFrom(6))
     expect(screen.getByTestId('stat-today-payment')).toHaveTextContent(`${strings.todayPayment}৳1,500`)
     expect(screen.getByTestId('stat-today-credit')).toHaveTextContent(`${strings.todayNewCredit}৳320`)
+  })
+
+  it('shows how long an entry takes: "Gore ekta hisab: 8.4 second"', async () => {
+    openDashboard()
+    const card = await screen.findByTestId('stat-entry-speed')
+    expect(card).toHaveTextContent(`${strings.entrySpeed}: ${strings.entrySpeedValue('8.4')}`)
+    expect(card).toHaveTextContent(strings.entrySpeedDetail(50))
+  })
+
+  it('says when entry speed has nothing to show yet', async () => {
+    openDashboard({ ...DATA, entry_speed: { median_seconds: null, samples: 0 } })
+    expect(await screen.findByTestId('stat-entry-speed')).toHaveTextContent(strings.entrySpeedNone)
   })
 
   it('lists the top customers and the old baki, each linking to the khata', async () => {

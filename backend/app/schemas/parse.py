@@ -3,7 +3,7 @@ from typing import Annotated
 from pydantic import BaseModel, BeforeValidator, Field, StringConstraints, model_validator
 
 from app.llm.base import ParserKind
-from app.models import TransactionType
+from app.models import InputMethod, TransactionType
 from app.schemas.common import Amount, Name, PastDateTime, ShortText
 from app.schemas.customer import CustomerCreate, CustomerRead
 from app.schemas.transaction import TransactionWithBalance
@@ -72,6 +72,17 @@ class ParsePreview(EntryPreview):
     model: str = Field(description='The model id, e.g. "openai/gpt-oss-120b", or "rule-based"')
 
 
+class EntryTimingIn(BaseModel):
+    """How long the entry took the shopkeeper: from the first keystroke or mic press until save.
+
+    Only numbers are stored (see app.models.EntryTiming). Optional, and never a reason to
+    refuse a save: a value that can't be right (over an hour) is dropped, not rejected.
+    """
+
+    duration_ms: int = Field(ge=0, description="Milliseconds from starting to write until saved")
+    input: InputMethod = Field(description="typed, or voice if the mic was used")
+
+
 class ParseConfirm(BaseModel):
     """The (possibly edited) preview. Give either `customer_id` or `new_customer`."""
 
@@ -87,6 +98,7 @@ class ParseConfirm(BaseModel):
     )
     customer_id: int | None = Field(default=None, description="An existing customer")
     new_customer: CustomerCreate | None = Field(default=None, description="Create this customer")
+    timing: EntryTimingIn | None = Field(default=None, description="For the entry-speed number")
 
     @model_validator(mode="after")
     def _one_customer(self) -> "ParseConfirm":
@@ -108,6 +120,9 @@ class ParseConfirmMany(BaseModel):
     """Several confirmed entries from one sentence, saved together (all or nothing)."""
 
     entries: list[ParseConfirm] = Field(min_length=1, max_length=MAX_ENTRIES)
+    timing: EntryTimingIn | None = Field(
+        default=None, description="For the entry-speed number: the whole sentence, once"
+    )
 
 
 class ParseConfirmManyResult(BaseModel):

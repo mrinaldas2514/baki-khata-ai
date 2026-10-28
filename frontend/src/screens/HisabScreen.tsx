@@ -23,6 +23,7 @@ import {
   toDraft,
   toMultiItems,
 } from '../entry'
+import { useEntryTimer } from '../entrySpeed'
 import { parseErrorMessage, saveErrorMessage } from '../errors'
 import { strings } from '../strings'
 import { useVoiceSettings } from '../voice/settings'
@@ -83,6 +84,8 @@ export function HisabScreen({ active, aiEnabled = true }: { active: boolean; aiE
   const [highlightId, setHighlightId] = useState<number | null>(null)
   const [undoNotice, setUndoNotice] = useState(false)
   const topRef = useRef<HTMLDivElement>(null)
+  // "Gore ekta hisab: X second" on the dashboard: first keystroke or mic press until saved.
+  const timer = useEntryTimer()
 
   // Voice: the transcript goes into the box, then through the same parse -> confirm -> save flow.
   const [voiceSettings, updateVoiceSettings] = useVoiceSettings()
@@ -174,6 +177,7 @@ export function HisabScreen({ active, aiEnabled = true }: { active: boolean; aiE
     const ids = new Set(rows.map((row) => row.id))
     setRecent((current) => [...rows, ...(current ?? []).filter((r) => !ids.has(r.id))].slice(0, RECENT_LIMIT))
     setHighlightId(results[results.length - 1].transaction.id)
+    timer.reset()
     setText('')
     goTo({ kind: 'saved', rawText, results })
   }
@@ -182,7 +186,7 @@ export function HisabScreen({ active, aiEnabled = true }: { active: boolean; aiE
     setSaving(true)
     setSaveError(null)
     try {
-      showSaved(rawText, [await api.confirm(toConfirmRequest(rawText, draft))])
+      showSaved(rawText, [await api.confirm(toConfirmRequest(rawText, draft), timer.current())])
     } catch (error) {
       setSaveError(saveErrorMessage(error))
     } finally {
@@ -196,7 +200,10 @@ export function HisabScreen({ active, aiEnabled = true }: { active: boolean; aiE
     setSaving(true)
     setSaveError(null)
     try {
-      const { results } = await api.confirmMany(drafts.map((draft) => toConfirmRequest(rawText, draft!)))
+      const { results } = await api.confirmMany(
+        drafts.map((draft) => toConfirmRequest(rawText, draft!)),
+        timer.current(),
+      )
       showSaved(rawText, results)
     } catch (error) {
       setSaveError(saveErrorMessage(error))
@@ -244,14 +251,20 @@ export function HisabScreen({ active, aiEnabled = true }: { active: boolean; aiE
       {showEntry && (
         <SmartEntry
           value={text}
-          onChange={setText}
+          onChange={(typed) => {
+            timer.typed(typed)
+            setText(typed)
+          }}
           onSubmit={handleSubmit}
           busy={step.kind === 'parsing' || voiceActive}
           actions={
             voiceEngine.engine !== 'none' && (
               <MicButton
                 state={voice.state}
-                onStart={voice.start}
+                onStart={() => {
+                  timer.micPressed()
+                  voice.start()
+                }}
                 onStop={voice.stop}
                 disabled={step.kind === 'parsing'}
               />

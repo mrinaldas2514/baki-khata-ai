@@ -32,6 +32,9 @@ async function submit(sentence: string) {
   return user
 }
 
+// Entry speed travels with every save (EntrySpeed.test.tsx checks the numbers).
+const TYPED = { duration_ms: expect.any(Number), input: 'typed' }
+
 function card() {
   return screen.getByRole('region', { name: strings.confirmTitle })
 }
@@ -93,7 +96,14 @@ describe('matched customer', () => {
     expect(await screen.findByText(`✓ ${strings.savedTitle}`)).toBeInTheDocument()
     expect(screen.getByTestId('new-balance')).toHaveTextContent('Baki ৳700')
     expect(api.bodiesOf(CONFIRM)).toEqual([
-      { raw_text: matched.raw_text, type: 'credit', amount: 500, item: 'dal, tel', customer_id: salma.id },
+      {
+        raw_text: matched.raw_text,
+        type: 'credit',
+        amount: 500,
+        item: 'dal, tel',
+        customer_id: salma.id,
+        timing: TYPED,
+      },
     ])
     const rows = within(screen.getByRole('region', { name: strings.recentTitle })).getAllByRole('listitem')
     expect(rows).toHaveLength(2)
@@ -229,6 +239,7 @@ describe('new customer', () => {
       amount: 90,
       item: null,
       new_customer: { name: 'Tanvir', note: null },
+      timing: TYPED,
     })
   })
 
@@ -359,6 +370,7 @@ describe('errors fall back to manual entry', () => {
       amount: 250,
       item: 'saban',
       new_customer: { name: 'Rina', note: null },
+      timing: TYPED,
     })
   })
 

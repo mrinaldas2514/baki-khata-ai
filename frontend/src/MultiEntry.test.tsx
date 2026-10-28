@@ -126,6 +126,7 @@ describe('several customers in one sentence', () => {
           { raw_text: SENTENCE, type: 'credit', amount: 250, item: null, customer_id: 1 },
           { raw_text: SENTENCE, type: 'payment', amount: 500, item: null, customer_id: 2 },
         ],
+        timing: { duration_ms: expect.any(Number), input: 'typed' },
       },
     ])
     const saved = screen.getAllByTestId('saved-entry')

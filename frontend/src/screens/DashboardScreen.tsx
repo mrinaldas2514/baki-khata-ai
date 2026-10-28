@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '../api/client'
-import type { CustomerBalanceSummary, Dashboard } from '../api/types'
+import type { CustomerBalanceSummary, Dashboard, EntrySpeed } from '../api/types'
 import { WeekChart } from '../components/WeekChart'
 import { Button } from '../components/ui'
+import { formatSeconds } from '../entrySpeed'
 import { formatDay, formatTaka } from '../format'
 import { href } from '../route'
 import { strings } from '../strings'
@@ -69,6 +70,8 @@ export function DashboardScreen() {
         />
       </div>
 
+      <EntrySpeedCard speed={data.entry_speed} />
+
       <WeekChart days={data.last_7_days} today={data.today} />
 
       <CustomerList
@@ -91,6 +94,23 @@ export function DashboardScreen() {
         }
         warning
       />
+    </div>
+  )
+}
+
+/** "Gore ekta hisab: 8.4 second": how quick writing an entry is, recently. */
+function EntrySpeedCard({ speed }: { speed: EntrySpeed }) {
+  return (
+    <div className="flex flex-col gap-1 rounded-2xl bg-white p-4" data-testid="stat-entry-speed">
+      <p className="text-xl font-semibold text-stone-800">
+        {strings.entrySpeed}:{' '}
+        <span className="text-3xl font-bold text-emerald-800 tabular-nums">
+          {speed.median_seconds === null ? '–' : strings.entrySpeedValue(formatSeconds(speed.median_seconds))}
+        </span>
+      </p>
+      <p className="text-base text-stone-600">
+        {speed.median_seconds === null ? strings.entrySpeedNone : strings.entrySpeedDetail(speed.samples)}
+      </p>
     </div>
   )
 }

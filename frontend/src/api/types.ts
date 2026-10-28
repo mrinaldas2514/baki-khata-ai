@@ -163,6 +163,12 @@ export interface DaySummary {
   payment: number
 }
 
+/** "Gore ekta hisab": median time per entry over the latest (up to 50) entries. */
+export interface EntrySpeed {
+  median_seconds: number | null
+  samples: number
+}
+
 export interface Dashboard {
   total_outstanding: number
   customers_with_baki: number
@@ -174,6 +180,7 @@ export interface Dashboard {
   overdue_customers: OverdueCustomer[]
   /** Oldest first, ending with today. */
   last_7_days: DaySummary[]
+  entry_speed: EntrySpeed
 }
 
 export interface Reminder {

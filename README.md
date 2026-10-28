@@ -142,6 +142,12 @@ Opened with **Settings** at the top right.
 
 - Big numbers: **Mot baki** (total owed, and by how many customers), **Ajker joma** (payments
   today) and **Ajker notun baki** (new baki today).
+- **Gore ekta hisab: 8.4 second**: how long writing one entry takes, the median of the last 50
+  entries, from the first keystroke (or mic press) on the Hisab screen until it's saved. The app
+  sends that number with the save (`timing: {duration_ms, input: "typed" | "voice"}` on
+  `/parse/confirm` and `/parse/confirm-many`); the backend keeps only the number, typed/voice and
+  how many entries were saved together, per shop (`entry_timings`), never the text. Clearing
+  the box starts over; anything over an hour (the phone was put down) is ignored.
 - **Shesh 7 din**: new baki (orange) and joma (green) per day for the last 7 days. Tap a day to
   read its numbers; screen readers get the same numbers as a table.
 - **Shobcheye beshi baki**: the top 5 customers by baki.
@@ -225,6 +231,8 @@ Bangladesh's 2025 data protection rules ask for clear consent that can be withdr
   `= + - @` get a leading `'` so Excel won't run them as formulas.
 - **Account muchhe din** deletes the user, the shop, every customer and every transaction (the
   database cascades from the shop), after the password is typed again.
+- **Entry speed is numbers only**: how long an entry took, typed or spoken, and how many
+  entries, per shop. No sentence or customer is attached; it's deleted with the account.
 - **Logs carry ids, not people.** No sentence, name, phone number or amount is logged at INFO or
   above (e.g. *Saved 3 entries in shop 4*, *Registered user 7 with shop 7*); a model's broken
   answer is only logged at DEBUG. uvicorn's access log has its query strings cut off
@@ -480,6 +488,7 @@ revoked_tokens (logged-out logins, until they would have expired)
 | **shops** | `id`, `name`, `owner_name`, `created_at` |
 | **customers** | `id`, `shop_id`, `name`, `phone` (optional), `note` (optional area/note), `created_at` |
 | **transactions** | `id`, `shop_id`, `customer_id`, `type` (`credit` \| `payment`), `amount`, `item` (optional), `raw_text` (optional), `created_at` |
+| **entry_timings** | `id`, `shop_id`, `duration_ms`, `input_method` (`typed` \| `voice`), `entry_count`, `created_at`: the dashboard's entry speed, numbers only |
 
 - **`type`**: `credit` means the customer took goods on baki. `payment` means the customer paid money.
 - **`amount`**: a whole number of taka, always greater than 0 (also enforced by a database
