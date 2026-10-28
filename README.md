@@ -713,20 +713,22 @@ first parse so it's clear which one is running.
    `openai/gpt-oss-120b` is a reasoning model; the backend asks it for low reasoning effort,
    which is plenty for one sentence and keeps parsing fast.
 3. **If Groq retires a model** (as it did `llama-3.3-70b-versatile`, the old default, in 2026):
-   at startup the backend asks Groq about `GROQ_MODEL` and `GROQ_STT_MODEL` and logs an error
-   such as
+   at startup the backend asks Groq for the list of models it serves and checks that
+   `GROQ_MODEL` and `GROQ_STT_MODEL` are in it. If one isn't, it logs an error such as
 
    ```
-   Groq rejected GROQ_MODEL='llama-3.3-70b-versatile': The model `llama-3.3-70b-versatile` has
-   been decommissioned and is no longer supported. The model may have been retired or misspelled.
-   Set GROQ_MODEL in backend/.env to a current model from https://console.groq.com/docs/models
-   and restart the backend.
+   Groq rejected GROQ_MODEL='llama-3.3-70b-versatile': The model `llama-3.3-70b-versatile` is
+   not in the list of models Groq serves to this API key. The model may have been retired or
+   misspelled. Set GROQ_MODEL in backend/.env to a current model from
+   https://console.groq.com/docs/models and restart the backend.
    ```
 
-   The same message is logged if a request fails later because of the model. Change the setting
-   in `backend/.env` and restart. The check runs in the background and never stops the backend
-   from starting (no internet only gives a warning). Check
-   https://console.groq.com/docs/deprecations from time to time.
+   (Ids with a slash, like `openai/gpt-oss-120b`, are looked up in that list. Asking Groq for one
+   model by id doesn't work for them: the SDK escapes the slash in the URL and Groq answers
+   "The model `openai%2Fgpt-oss-120b` does not exist".) A similar message is logged if a request
+   fails later because of the model. Change the setting in `backend/.env` and restart. The check
+   runs in the background and never stops the backend from starting (no internet only gives a
+   warning). Check https://console.groq.com/docs/deprecations from time to time.
 4. Restart `uvicorn` and try it:
 
    ```bash
