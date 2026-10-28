@@ -65,7 +65,7 @@ function AiSetting({ user }: { user: User }) {
   return (
     <section className="flex flex-col gap-3 rounded-3xl bg-white p-4 shadow-md">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-xl font-bold text-stone-900" id={`${hintId}-label`}>
+        <h3 className="min-w-0 text-xl font-bold text-stone-900" id={`${hintId}-label`}>
           {strings.settings.aiTitle}
         </h3>
         <button

@@ -13,3 +13,17 @@ html {
 body {
   @apply bg-stone-100 font-sans text-stone-900 antialiased;
 }
+
+/* Browsers keep a fieldset at least as wide as its content; on a small phone with large text
+   that pushes the page sideways. */
+fieldset {
+  min-width: 0;
+}
+
+/* Outside Tailwind's layers on purpose, so it wins over `focus:outline-none`. */
+/* Keyboard focus, everywhere: a dark ring with a yellow halo, visible on white and on green. */
+:focus-visible:not([tabindex='-1']) {
+  outline: 3px solid #1c1917;
+  outline-offset: 0;
+  box-shadow: 0 0 0 6px #fde047;
+}

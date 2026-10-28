@@ -102,7 +102,7 @@ function LoggedIn({ session }: { session: Session }) {
 function Header({ shopName, settingsOpen = false }: { shopName?: string; settingsOpen?: boolean }) {
   return (
     <header className="bg-emerald-800 px-4 py-2 text-white">
-      <div className="mx-auto flex min-h-12 max-w-md items-center justify-between gap-3">
+      <div className="mx-auto flex min-h-12 max-w-md flex-wrap items-center justify-between gap-x-3 gap-y-1">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold">{strings.appTitle}</h1>
           {shopName && (

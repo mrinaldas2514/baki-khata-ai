@@ -88,7 +88,7 @@ export function TypeBadge({ type }: { type: TransactionType }) {
 }
 
 export const inputClass =
-  'min-h-14 w-full rounded-2xl border-2 border-stone-300 bg-white px-4 text-xl text-stone-900 placeholder:text-stone-400 focus:border-emerald-600 focus:outline-none aria-invalid:border-red-500'
+  'min-h-14 w-full rounded-2xl border-2 border-stone-300 bg-white px-4 text-xl text-stone-900 placeholder:text-stone-500 focus:border-emerald-600 focus:outline-none aria-invalid:border-red-500'
 
 /** A labelled input with its problem underneath: name, phone, note... */
 export function Field({

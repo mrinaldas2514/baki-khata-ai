@@ -224,19 +224,12 @@ export function KhataScreen({ customerId }: { customerId: number }) {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <Button
-            variant="credit"
-            className="px-2! whitespace-nowrap"
-            onClick={() => open({ kind: 'add', type: 'credit' })}
-          >
+        {/* Side by side; one under the other when large text doesn't fit. */}
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(9rem,1fr))] gap-3">
+          <Button variant="credit" className="px-2!" onClick={() => open({ kind: 'add', type: 'credit' })}>
             {strings.addCredit}
           </Button>
-          <Button
-            variant="payment"
-            className="px-2! whitespace-nowrap"
-            onClick={() => open({ kind: 'add', type: 'payment' })}
-          >
+          <Button variant="payment" className="px-2!" onClick={() => open({ kind: 'add', type: 'payment' })}>
             {strings.addPayment}
           </Button>
         </div>

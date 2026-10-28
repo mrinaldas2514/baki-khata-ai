@@ -43,10 +43,10 @@ export function SmartEntry({ value, onChange, onSubmit, busy = false, actions, f
         maxLength={500}
         disabled={busy}
         autoComplete="off"
-        className="w-full resize-none rounded-2xl border-2 border-stone-300 bg-white p-4 text-xl leading-relaxed text-stone-900 placeholder:text-stone-400 focus:border-emerald-600 focus:outline-none disabled:bg-stone-100"
+        className="w-full resize-none rounded-2xl border-2 border-stone-300 bg-white p-4 text-xl leading-relaxed text-stone-900 placeholder:text-stone-500 focus:border-emerald-600 focus:outline-none disabled:bg-stone-100"
       />
-      <div className="flex gap-3">
-        <Button type="submit" disabled={!text || busy} className="flex-1">
+      <div className="flex flex-wrap gap-3">
+        <Button type="submit" disabled={!text || busy} className="flex-[1_1_9rem]">
           {strings.submit}
         </Button>
         {actions}

@@ -164,21 +164,12 @@ function EntryCard({
         </Alert>
       )}
 
-      <div className="flex gap-3">
-        <Button
-          variant="secondary"
-          className="flex-1 px-2! text-lg! whitespace-nowrap"
-          onClick={onEdit}
-          disabled={disabled}
-        >
+      {/* Side by side; one under the other when large text doesn't fit. */}
+      <div className="flex flex-wrap gap-3">
+        <Button variant="secondary" className="flex-[1_1_8rem] px-2! text-lg!" onClick={onEdit} disabled={disabled}>
           {strings.edit}
         </Button>
-        <Button
-          variant="danger"
-          className="flex-1 px-2! text-lg! whitespace-nowrap"
-          onClick={onRemove}
-          disabled={disabled}
-        >
+        <Button variant="danger" className="flex-[1_1_8rem] px-2! text-lg!" onClick={onRemove} disabled={disabled}>
           {strings.multi.remove}
         </Button>
       </div>

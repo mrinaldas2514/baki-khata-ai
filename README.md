@@ -112,6 +112,29 @@ Write `rahim 200 baki`, save: it shows *Pending sync*. Set **No throttling**: it
 a moment and appears in the recent list. **Application → IndexedDB → baki-khata → queue** shows
 what's waiting; **Slow 3G** shows the weak-connection behaviour.
 
+### Accessibility
+
+Checked on every screen (login, register, Hisab, the confirmation card for a matched, ambiguous
+and new customer, edit form, several entries, customers, khata, dashboard, settings) at **360 px
+wide** with [axe-core](https://github.com/dequelabs/axe-core) (WCAG 2.1 A/AA and best
+practices) at **100%, 150% and 200% text size** (what Android's font-size setting does to the
+page): no violations, and no sideways scrolling at any size.
+
+- **Large text**: everything is sized in `rem`, so the phone's text size scales the whole app.
+  Rows of buttons wrap one under the other when the text doesn't fit (Hisab korun + mic, Thik
+  kore din + Bad din, Baki likhun + Joma likhun, the sort buttons), the bottom tabs' labels shrink
+  a little and break as a last resort, and the chart's screen-reader table no longer widens the
+  page.
+- **The amount on the confirmation card** is as big as fits: up to 88 px (৳500, ৳1,500), smaller
+  for long amounts (৳1,25,000) so it never runs past the card, bold, in red (Baki) or green
+  (Joma) with the word next to it, so colour is never the only signal.
+- **Visible focus**: keyboard focus always shows a dark ring with a yellow halo, visible on the
+  white cards and on the green title bar.
+- **Screen readers**: every input has a label, icon buttons have names, the mic button says what
+  it's doing (`aria-pressed`, "Shunchi..."), the chart has a table version, status messages
+  (saved, offline, sync) are live regions, and the AI / AI chhara label reads "Ke porlo: AI".
+- **Contrast**: text meets AA (4.5:1) everywhere, placeholders included (`stone-500` on white).
+
 ## The screens
 
 ### Login and register
