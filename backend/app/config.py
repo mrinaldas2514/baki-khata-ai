@@ -2,10 +2,15 @@
 
 from functools import lru_cache
 from typing import Annotated, Literal
+from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
+
+# Where the frontend runs in development (npm run dev). Production must set CORS_ORIGINS.
+DEV_CORS_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
+_LOCAL_HOSTS = {"localhost", "127.0.0.1"}
 
 
 class Settings(BaseSettings):
@@ -13,16 +18,18 @@ class Settings(BaseSettings):
 
     app_name: str = "Baki Khata AI"
     environment: str = "development"
-    # Switching to PostgreSQL only requires changing this URL (plus installing a driver).
+    # SQLite for development; PostgreSQL in production (postgresql://... or postgres://... URLs
+    # are given the psycopg driver, so a hosting provider's URL can be pasted as it is).
     database_url: str = "sqlite:///./baki_khata.db"
     # The shop's local timezone. Used to decide what "today" means.
     app_timezone: str = "Asia/Dhaka"
     sql_echo: bool = False
-    # Browser origins allowed to call the API (the frontend dev server). Comma-separated.
-    cors_origins: Annotated[list[str], NoDecode] = [
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ]
+    # Browser origins allowed to call the API (the frontend), comma-separated, e.g.
+    # "https://baki-khata.vercel.app". Unset: the dev server's addresses, outside production only.
+    cors_origins: Annotated[list[str] | None, NoDecode] = None
+    # Largest request body the API reads (bytes), except POST /transcribe, which may be
+    # STT_MAX_AUDIO_BYTES plus a little for the form around the audio.
+    max_request_bytes: int = Field(default=128 * 1024, gt=0)
 
     # Which parser /parse uses. "groq": the real model (needs GROQ_API_KEY). "fake": simple
     # rules, no AI and no key, for demos. "auto": groq when a key is set, otherwise fake.
@@ -87,6 +94,16 @@ class Settings(BaseSettings):
             return [origin.strip().rstrip("/") for origin in value.split(",") if origin.strip()]
         return value
 
+    @field_validator("database_url")
+    @classmethod
+    def _postgres_driver(cls, value: str) -> str:
+        # Render, Heroku and others hand out postgres:// or postgresql:// URLs; SQLAlchemy
+        # needs to be told the driver (psycopg 3).
+        for prefix in ("postgres://", "postgresql://"):
+            if value.startswith(prefix):
+                return "postgresql+psycopg://" + value.removeprefix(prefix)
+        return value
+
     @field_validator("llm_provider", mode="before")
     @classmethod
     def _blank_provider_is_auto(cls, value: object) -> object:
@@ -110,6 +127,44 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.environment.strip().lower() in ("production", "prod")
+
+    @property
+    def allowed_origins(self) -> list[str]:
+        if self.cors_origins is None:
+            return [] if self.is_production else DEV_CORS_ORIGINS
+        return self.cors_origins
+
+    def production_problems(self) -> list[str]:
+        """What must change before this can run with ENVIRONMENT=production (empty: nothing)."""
+        if not self.is_production:
+            return []
+        problems = []
+        if self.jwt_secret is None:
+            problems.append(
+                "JWT_SECRET is not set. Generate one with: "
+                'python -c "import secrets; print(secrets.token_urlsafe(48))"'
+            )
+        if not self.database_url.startswith("postgresql"):
+            problems.append(
+                "DATABASE_URL must be a PostgreSQL database (postgresql://user:password@host/db); "
+                "SQLite is for development only."
+            )
+        if not self.cors_origins:
+            problems.append(
+                "CORS_ORIGINS is not set. Set it to the frontend's address, e.g. "
+                "https://baki-khata.vercel.app (comma-separated for several)."
+            )
+        for origin in self.cors_origins or []:
+            parts = urlsplit(origin)
+            if origin == "*" or "*" in origin:
+                problems.append("CORS_ORIGINS must list the frontend's addresses, not '*'.")
+            elif parts.scheme not in ("http", "https") or not parts.hostname or parts.path:
+                problems.append(f"CORS_ORIGINS has {origin!r}; use scheme://host[:port] only.")
+            elif parts.scheme != "https" and parts.hostname not in _LOCAL_HOSTS:
+                problems.append(f"CORS_ORIGINS has {origin!r}; use https:// in production.")
+        if self.sql_echo:
+            problems.append("SQL_ECHO must be false in production (it logs every query).")
+        return problems
 
 
 @lru_cache
