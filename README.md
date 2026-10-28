@@ -2,6 +2,161 @@
 
 [![CI](https://github.com/mrinaldas2514/baki-khata-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/mrinaldas2514/baki-khata-ai/actions/workflows/ci.yml)
 
+**One sentence instead of a ledger page.** A shopkeeper types or says
+*"salma apa pach sho taka baki, dal r tel"*, checks a big confirmation card, and the credit is in
+the customer's khata, with the balance, reminders and a dashboard worked out for them.
+
+## The problem
+
+Millions of small shops in Bangladesh and India still keep customer credit (*baki*) in a paper
+*khata*: one page per customer, every entry by hand, balances added up in the head. Paper gets
+lost or wet, can't send a reminder, and a dispute is word against word. Existing ledger apps
+digitize the page but not the work: they want the shopkeeper to pick a customer from a list, type
+an amount into a number field, choose credit or payment and type the goods, which is four or five
+taps and fields per entry, at a busy counter, often on a cheap phone with a weak connection. Baki
+Khata AI keeps the shopkeeper's own habit instead: say or type the entry the way you'd say it, in
+Banglish, Bangla script or English, and the app turns it into a structured entry to confirm.
+
+## Key features
+
+- **One-sentence entries, typed or spoken**: an LLM (Groq, `openai/gpt-oss-120b`) reads
+  Banglish/Bangla/English and code-mixed sentences, spoken number words (*pach sho, dedh hajar,
+  sowa sho*), Bangla digits and several customers in one sentence; spoken amounts are normalized
+  by rules before the model sees them.
+- **Confirmation before saving**: a big card shows amount, Baki/Joma, item and customer, labelled
+  **AI** or **AI chhara**, with fuzzy name matching that asks when two customers fit.
+- **Works on weak or no internet**: installable PWA that opens offline; entries are read on the
+  phone by the rule-based parser and kept with *Pending sync*, then sent in order with an
+  idempotency key so nothing is saved twice.
+- **Voice**: browser speech recognition, with a server-side Whisper fallback.
+- **Khata, dashboard, reminders**: running balances, overdue (FIFO) baki, last 7 days, WhatsApp
+  reminder text, CSV export, and how long an entry takes (*Gore ekta hisab: 8 second*).
+- **Privacy**: consent at sign-up, an *AI bondho* (AI off) switch that keeps every sentence on
+  the server, logs without names or amounts, account deletion.
+- **Measured**: an evaluation of 186 labelled sentences across 14 categories, for the rules and
+  the LLM, with accuracy per field and category and p95 latency.
+- **Deploy-ready**: production mode that refuses unsafe settings, security headers, `/health`
+  with a database check, Docker + compose, Render + Vercel config, CI on every push.
+
+## Tech stack
+
+| | |
+|---|---|
+| **Backend** | Python 3.13, FastAPI, SQLAlchemy 2, Alembic, Pydantic 2, PostgreSQL (SQLite for development), argon2id + JWT, Groq SDK (LLM + Whisper), RapidFuzz |
+| **Frontend** | React 19, TypeScript, Vite, Tailwind CSS 4, Web Speech API / MediaRecorder, IndexedDB, a hand-written service worker |
+| **Quality** | pytest (737 tests, SQLite and PostgreSQL), Vitest + Testing Library (426 tests), ruff, oxlint, Prettier, axe-core audits, an LLM evaluation harness |
+| **Delivery** | Docker, docker compose, GitHub Actions, Render (API + PostgreSQL), Vercel (static PWA) |
+
+## Architecture
+
+```mermaid
+flowchart LR
+    subgraph Phone["Shopkeeper's phone (PWA)"]
+        UI["React app<br/>Hisab · Customer · Dashboard"]
+        SW["Service worker<br/>app shell cache"]
+        Rules["Rule parser (TS port)<br/>+ cached customers"]
+        Queue[("IndexedDB<br/>offline queue")]
+        UI -- offline --> Rules
+        UI -- save offline --> Queue
+        SW -. serves .-> UI
+    end
+
+    subgraph API["FastAPI backend"]
+        Parse["/parse<br/>numbers → LLM or rules → validate → match names"]
+        Confirm["/parse/confirm(-many)<br/>Idempotency-Key"]
+        Ledger["customers · transactions<br/>dashboard · reminders · export"]
+        Auth["auth · ownership · rate limits"]
+    end
+
+    DB[("PostgreSQL")]
+    Groq["Groq<br/>gpt-oss-120b · Whisper"]
+
+    UI -- "HTTPS + JWT" --> Parse
+    UI --> Confirm
+    Queue -- "sync, same key" --> Confirm
+    UI --> Ledger
+    Parse -- "AI on" --> Groq
+    Parse --> DB
+    Confirm --> DB
+    Ledger --> DB
+    Auth --> DB
+```
+
+The sentence is never saved from the model directly: `/parse` returns a preview (nothing saved),
+the shopkeeper confirms or fixes it, and `/parse/confirm` saves it with the original sentence.
+
+## Evaluation results
+
+`python -m eval.run_eval --parser both` (in `backend/`) runs 186 labelled sentences in 14
+categories through the same steps as `/parse` (see [Accuracy evaluation](#accuracy-evaluation)).
+A sentence counts as right only if every entry has the right name, amount, type and item.
+
+| Metric | Rule-based parser (AI off) | LLM (`openai/gpt-oss-120b`) |
+|---|---|---|
+| **All fields correct, per sentence** | **90.3%** (168/186) | *run `--parser llm` with a key* |
+| Customer name | 97.7% | – |
+| Amount | 97.7% | – |
+| Type (baki / joma) | 95.5% | – |
+| Item | 90.9% | – |
+| Non-transactions refused | 87.5% (21/24) | – |
+| Latency per sentence, average / p95 | 0.1 ms / 0.2 ms | – |
+
+Where the rules fall short (full list in
+[`backend/eval/results/2026-10-28_rules_rule-based.md`](backend/eval/results/2026-10-28_rules_rule-based.md)):
+typos in keywords (*dlo*, *jma*, *shod*: 60%), several customers without commas
+(*"Hasan paid 500 and Rina took 200"*: 75% for multi-entry), verbs it doesn't know (*diye gelo*),
+and sentences with a number that aren't transactions (*"chal er dam 70 taka kg"*). Those are what
+the LLM is for; the evaluation shows by how much once it's run with a key.
+
+## Design decisions and trade-offs
+
+- **Confirmation before every save.** The AI only proposes; the shopkeeper sees the amount in
+  big type and the customer before anything is written, and low-confidence readings open the
+  edit form instead. It costs one tap per entry, but a wrong baki in someone's khata costs trust,
+  and AI mistakes on names and amounts are the expensive kind.
+- **Fuzzy name matching, with "ambiguous" as an answer.** Names are matched without the AI:
+  honorifics dropped, Bangla romanized, Banglish spelling ironed out (Rohim = Rahim = রহিম). When
+  two customers fit (two Rahims), the app asks rather than guessing; when nobody fits it says
+  *Notun customer*, so nobody is created by surprise. The price is an extra tap on look-alikes.
+- **AI-off privacy mode.** *AI bondho rakhun* sends nothing to the AI provider: the server's
+  rule-based parser reads the sentences instead (90% of the evaluation set) and voice falls back
+  to the browser. Shopkeepers who don't want their customers' names leaving the shop can still
+  use the app, with lower accuracy on messy sentences, and the card says **AI chhara** so it's
+  never a surprise.
+- **Browser speech first, Whisper as fallback.** The Web Speech API is free, instant and shows
+  words while speaking, but is weaker on mixed Banglish and absent in Firefox; Groq Whisper is
+  better on names and amounts but costs money and a round trip. The app uses the browser when it
+  can and the server when it must (or when chosen), and either way the words go into the box to
+  check, never straight to save.
+- **An offline queue with idempotency keys.** Shops have bad connections, so an entry must
+  never be lost or doubled. Offline, the sentence is read on the phone by a TypeScript port of
+  the rules (checked against the Python parser on 237 sentences) and kept in IndexedDB; every save
+  carries a random key from the moment *Save* is pressed, and the server stores the answer with
+  the entry in one commit, so a retry after a lost answer is a no-op. Trade-offs: offline
+  readings are rules-only and balances shown offline are the last known ones.
+- **Provider model retirement is a config change.** Groq retires models (the old default
+  `llama-3.3-70b-versatile` went in 2026). The model is `GROQ_MODEL`; the backend checks it
+  against Groq's model list at startup and logs exactly what to change, and everything outside
+  `app/llm/` depends on a one-method `LLMClient` interface, so switching provider is one class.
+- **Balances are never stored.** They're computed from the transactions (with a window function
+  for running balances), so editing or deleting an entry can't leave a balance out of sync.
+
+## Screenshots
+
+*(Placeholders: add the images to `docs/screenshots/`.)*
+
+| Hisab: one sentence | Confirmation card | Offline: Pending sync |
+|---|---|---|
+| ![Hisab](docs/screenshots/hisab.png) | ![Confirmation](docs/screenshots/confirm.png) | ![Offline](docs/screenshots/offline.png) |
+
+| Customer khata | Dashboard | Settings (AI off) |
+|---|---|---|
+| ![Khata](docs/screenshots/khata.png) | ![Dashboard](docs/screenshots/dashboard.png) | ![Settings](docs/screenshots/settings.png) |
+
+---
+
+## What's in this repository
+
 A mobile-first app for small shopkeepers in Bangladesh and India to track customer
 credit (*baki*) by typing or speaking Banglish instead of writing in a paper ledger.
 
@@ -623,26 +778,33 @@ backend/
 │   ├── rate_limit.py    # in-memory rate limiter (login, register, parse, transcribe)
 │   ├── privacy.py       # the privacy note's version, and where its promises are kept
 │   ├── logging_privacy.py # keeps query strings (names) out of the access log
-│   ├── groq_models.py   # startup check: logs a clear error if Groq rejects a configured model
+│   ├── groq_models.py   # startup check: logs a clear error if Groq doesn't serve a configured model
+│   ├── http_security.py # security headers and the request body size limit (middleware)
 │   ├── time_utils.py    # UTC / shop-local-time helpers
 │   ├── llm/             # LLM interface, Groq client, rule-based demo parser
 │   ├── stt/             # speech-to-text interface and the Groq Whisper client
-│   ├── models/          # SQLAlchemy tables: Shop, User, RevokedToken, Customer, Transaction
+│   ├── models/          # SQLAlchemy tables: Shop, User, RevokedToken, Customer, Transaction,
+│   │                    #   EntryTiming (entry speed), IdempotencyKey
 │   ├── schemas/         # Pydantic request/response models and validation
 │   ├── routers/         # HTTP endpoints (thin, just call services)
 │   └── services/        # Business logic (auth, balance, customers, transactions, dashboard,
 │                        #   reminders, parsing, parse_prompt, number_words, name_matching,
-│                        #   transcription, phones, export)
-├── migrations/          # Alembic: env.py and versions/ (0001 initial schema, 0002 accounts)
+│                        #   transcription, phones, export, entry_speed, idempotency)
+├── migrations/          # Alembic: env.py and versions/ (0001 initial schema, 0002 accounts,
+│                        #   0003 entry timings, 0004 idempotency keys)
+├── eval/                # accuracy evaluation: run_eval.py, data/sentences.json (186),
+│                        #   results/, my_sentences.template.csv, rules_parity.py (README inside)
+├── start.sh             # server start: alembic upgrade head, then uvicorn (Render, Docker)
+├── Dockerfile
 ├── alembic.ini
 ├── tests/               # pytest suite (the LLM and speech-to-text are always faked)
 │   └── fixtures/eval_sentences.json   # example sentences + expected output
 ├── app/seed.py          # demo shop: python -m app.seed
 ├── requirements.txt
 ├── requirements-dev.txt
-├── pyproject.toml       # pytest config
+├── pyproject.toml       # pytest and ruff config
 └── .env.example
-frontend/                # React + Vite + TypeScript + Tailwind
+frontend/                # React + Vite + TypeScript + Tailwind, an installable PWA
 ├── src/
 │   ├── App.tsx          # the shell: login while logged out; title bar, screen, bottom tabs
 │   ├── session.ts       # who is logged in (token + user), kept in localStorage
@@ -660,8 +822,20 @@ frontend/                # React + Vite + TypeScript + Tailwind
 │   │                    #   BottomNav, TransactionForm, CustomerForm, ReminderSheet,
 │   │                    #   SavedMessage (with Undo), WeekChart, Dialog...
 │   ├── voice/           # speech engines (browser / server), useVoiceInput, voice settings
+│   ├── offline/         # rules.ts (the rule parser in TypeScript) + rulesParity.json,
+│   │                    #   localPreview, queue (IndexedDB, sync, Idempotency-Key),
+│   │                    #   customerCache, store, online
+│   ├── entrySpeed.ts    # first keystroke / mic press → saved timer
 │   └── test/            # test setup, the fetch mock and the speech API mocks
+├── pwa/sw.js            # the service worker (vite.config.ts fills in the file list)
+├── public/              # manifest.webmanifest, icons/, favicon
+├── docker/              # nginx config for the Docker image
+├── vercel.json          # Vercel: SPA routing, caching, security headers
+├── Dockerfile
 └── .env.example
+docker-compose.yml       # PostgreSQL + API + frontend: docker compose up --build
+render.yaml              # Render blueprint: API + PostgreSQL
+.github/workflows/ci.yml # CI: lint, tests (SQLite + PostgreSQL), build, docker compose smoke test
 ```
 
 ## Data model
@@ -897,8 +1071,8 @@ it from an old `frontend/.env`.)
 With `LLM_PROVIDER=fake`, or `auto` and no `GROQ_API_KEY`, `/parse` uses a small rule-based
 parser (`app/llm/rule_based.py`) instead of the AI. It plugs in behind the same `LLMClient`
 interface, so number normalization, validation, the sanity check and customer name matching all
-run exactly as with the real model. It's good enough to demo the app (it gets the 20 evaluation
-sentences right): the name is the first word, the amount is the number next to "taka" (or the
+run exactly as with the real model. It's good enough to demo the app (it reads 90% of the 186
+evaluation sentences fully right, see [Evaluation results](#evaluation-results)): the name is the first word, the amount is the number next to "taka" (or the
 one that isn't a quantity like "2 kg"), and the type comes from words like baki/nilo vs.
 dilo/joma/shodh. Anything less regular needs the real model; the backend logs a warning at the
 first parse so it's clear which one is running.
@@ -1212,16 +1386,30 @@ unit tests; all of them are in the evaluation set too.)
 
 ```bash
 cd backend
-pytest
+pytest              # 737 tests
+ruff check . && ruff format --check .
 ```
 
 ```bash
 cd frontend
-npm test            # Vitest + React Testing Library (npm run test:watch to re-run on save)
+npm test            # Vitest + React Testing Library, 426 tests (npm run test:watch to re-run on save)
 npm run typecheck   # TypeScript
 npm run lint        # oxlint
 npm run format      # Prettier
 ```
+
+CI runs all of it on every push (see [Continuous integration](#continuous-integration)).
+
+**Added in this round:** the Groq model check with ids that contain a slash
+(`test_groq_models.py`), which parser read a sentence (`test_parse_api.py`, `test_privacy.py`),
+the evaluation's data, scoring, CSV and reports with no real API (`test_eval.py`, plus a floor
+under the rule parser's accuracy), entry speed (`test_entry_speed.py`), production mode,
+security headers, size limits and `/health` (`test_production.py`), idempotency keys including
+two requests racing (`test_idempotency.py`), and that the browser's copy of the rules is up to
+date (`test_rules_parity.py`). In the frontend: the AI / AI chhara label, entry timing
+(`src/EntrySpeed.test.tsx`), the rule parser's 237 parity cases (`src/offline/rules.test.ts`),
+the queue's order, retries, refusals and created customers (`src/offline/queue.test.ts`), and the
+whole offline flow on the Hisab screen (`src/Offline.test.tsx`, with a fake IndexedDB).
 
 The backend tests cover (besides the parsing, balances, dashboard, reminders and voice from
 before): migrations (`test_migrations.py`: `upgrade head` equals the models, downgrade, the app
@@ -1262,6 +1450,17 @@ TEST_DATABASE_URL=postgresql+psycopg://user:password@localhost:5432/baki_test py
 ```
 
 ## Next steps (not built yet)
+
+- **Run the LLM evaluation** with a key (`python -m eval.run_eval --parser both` in `backend/`),
+  commit `backend/eval/results/`, and put the numbers in [Evaluation results](#evaluation-results).
+  Then add real shopkeeper sentences in `backend/eval/my_sentences.csv`.
+- **Fill in the screenshots** (`docs/screenshots/`, see [Screenshots](#screenshots)).
+- **Offline is rules-only**: entries written offline are read by the rule-based parser; re-reading
+  pending entries with the AI when the connection is back (before the shopkeeper confirms) would
+  need the confirmation to move to after sync.
+- **Offline balances** are the last ones known; pending entries aren't added to them yet.
+- A **Content-Security-Policy** listing the exact API origin on Vercel (today `connect-src` allows
+  any `https:` origin, since the API's address is a build setting).
 
 - **Password reset** (by SMS code or email). Today a forgotten password means a new account.
 - **Change password / phone** in Settings, and see where you're logged in ("log out everywhere").
