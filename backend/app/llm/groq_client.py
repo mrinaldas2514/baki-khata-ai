@@ -3,7 +3,7 @@ import logging
 import groq
 
 from app.groq_models import log_if_model_rejected
-from app.llm.base import ChatMessage, LLMProviderError
+from app.llm.base import ChatMessage, LLMBusyError, LLMProviderError
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +42,10 @@ class GroqLLMClient:
                 max_completion_tokens=1024 if self._reasoning else 400,
                 **options,
             )
+        except (groq.RateLimitError, groq.APITimeoutError) as exc:
+            # The free tier allows ~8,000 tokens a minute: the parser falls back to the rules.
+            logger.warning("Groq is busy: %s", type(exc).__name__)
+            raise LLMBusyError(str(exc)) from exc
         except groq.APIError as exc:
             log_if_model_rejected(exc, "GROQ_MODEL", self._model)
             logger.warning("Groq request failed: %s", exc)

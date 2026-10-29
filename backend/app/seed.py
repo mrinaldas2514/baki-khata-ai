@@ -6,6 +6,8 @@
     python -m app.seed --reset    # deletes the demo shop (and its data) and creates it again
 
 Prints the demo login (phone and password) to use on the app's login screen.
+
+With SEED_DEMO_ON_START=true the backend does the same (without --reset) every time it starts.
 """
 
 import argparse
@@ -63,12 +65,12 @@ TRANSACTIONS = [
 ]
 
 
-def _demo_user(db: Session) -> User | None:
+def demo_user(db: Session) -> User | None:
     return db.scalar(select(User).where(User.phone == normalize_mobile(DEMO_PHONE)))
 
 
 def seed(db: Session, reset: bool = False) -> Shop:
-    existing = _demo_user(db)
+    existing = demo_user(db)
     if existing is not None and not reset:
         return db.get(Shop, existing.shop_id)
     if existing is not None:
@@ -123,7 +125,7 @@ def main() -> None:
     except DatabaseNotMigratedError as exc:
         sys.exit(str(exc))
     with Session(engine, expire_on_commit=False) as db:
-        before = _demo_user(db)
+        before = demo_user(db)
         shop = seed(db, reset=args.reset)
     if before is not None and not args.reset:
         print(f"The demo shop '{shop.name}' already exists. Use --reset to recreate it.")

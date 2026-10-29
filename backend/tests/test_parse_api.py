@@ -206,6 +206,75 @@ def test_groq_client_reports_its_model():
     assert (client.parser, client.model) == ("llm", "openai/gpt-oss-120b")
 
 
+def groq_answering(handler):
+    """The real Groq client, with its HTTP calls answered by `handler` (no network)."""
+    import groq
+    import httpx
+
+    from app.llm.groq_client import GroqLLMClient
+
+    llm = GroqLLMClient(api_key="gsk_test", model="openai/gpt-oss-120b")
+    llm._client = groq.Groq(
+        api_key="gsk_test",
+        max_retries=0,
+        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    return llm
+
+
+def rate_limited(request):
+    import httpx
+
+    return httpx.Response(
+        429,
+        headers={"retry-after": "7"},
+        json={
+            "error": {
+                "message": "Rate limit reached: 8000 tokens per minute",
+                "code": "rate_limit_exceeded",
+            }
+        },
+    )
+
+
+def timed_out(request):
+    import httpx
+
+    raise httpx.ReadTimeout("timed out", request=request)
+
+
+@pytest.mark.parametrize("handler", [rate_limited, timed_out], ids=["429", "timeout"])
+def test_preview_falls_back_to_the_rules_when_groq_is_busy(engine, fake_stt, handler):
+    """A 429 (free tier: ~8,000 tokens a minute) or a timeout: the rules read it, no error."""
+    from fastapi.testclient import TestClient
+
+    from app.services.parsing import AI_BUSY_NOTICE
+
+    with TestClient(
+        create_app(engine, llm_client=groq_answering(handler), stt_client=fake_stt)
+    ) as client:
+        owner = client.post("/auth/register", json=registration()).json()
+        response = client.post(
+            f"/shops/{owner['user']['shop']['id']}/parse",
+            json={"text": "karim 500 taka dilo"},
+            headers=auth_header(owner["access_token"]),
+        )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert (body["parser"], body["model"]) == ("rules", "rule-based")  # "AI chhara" on the card
+    assert body["notice"] == AI_BUSY_NOTICE
+    assert (body["parsed"]["customer_name"], body["parsed"]["amount"]) == ("karim", 500)
+    assert body["parsed"]["type"] == "payment"
+
+
+def test_preview_from_the_ai_has_no_notice(client, parse_url, fake_llm: FakeLLM):
+    fake_llm.reply(llm_answer())
+    assert (
+        client.post(parse_url, json={"text": "rahim 2 kg chal 120 taka baki"}).json()["notice"]
+        is None
+    )
+
+
 # --- Confirm ------------------------------------------------------------------------------
 
 

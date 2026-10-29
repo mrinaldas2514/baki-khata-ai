@@ -25,6 +25,7 @@ const banglish = {
     toRegister: 'Notun account khulun',
     haveAccount: 'Age thekei account ache?',
     toLogin: 'Login korun',
+    demoLogin: 'Demo login',
     registerTitle: 'Notun account khulun',
     registerSubtitle: 'Ekbar likhe nin. Tarpor shudhu mobile number ar password diye login.',
     yourName: 'Apnar naam',

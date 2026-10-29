@@ -1,7 +1,7 @@
 import { type FormEvent, type ReactNode, useState } from 'react'
 import { api } from '../api/client'
 import { Alert, Button, Field, PasswordInput } from '../components/ui'
-import { CONSENT_VERSION } from '../config'
+import { CONSENT_VERSION, DEMO_LOGIN, showDemoLogin } from '../config'
 import { authErrorMessage, fieldProblem } from '../errors'
 import { normalizeMobile } from '../phone'
 import { href } from '../route'
@@ -90,6 +90,11 @@ export function LoginScreen({ endReason }: { endReason: EndReason | null }) {
           {strings.auth.toRegister}
         </a>
       </p>
+      {showDemoLogin() && (
+        <p className="text-center text-base text-stone-600" data-testid="demo-login">
+          {strings.auth.demoLogin}: {DEMO_LOGIN.phone} / {DEMO_LOGIN.password}
+        </p>
+      )}
     </AuthCard>
   )
 }

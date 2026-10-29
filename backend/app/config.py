@@ -59,6 +59,10 @@ class Settings(BaseSettings):
     # and a lost phone's login still ends on its own (or at once with "Logout").
     jwt_expire_minutes: int = Field(default=7 * 24 * 60, gt=0, le=90 * 24 * 60)
 
+    # Create the demo shop and its login (01700000000 / demo1234, see app/seed.py) at startup if
+    # they don't exist, so visitors of a public demo can log in. Never deletes or resets anything.
+    seed_demo_on_start: bool = False
+
     # Requests allowed per client IP (login, register) or per shop (parse, transcribe).
     rate_limit_enabled: bool = True
     rate_limit_login_per_minute: int = Field(default=10, gt=0)

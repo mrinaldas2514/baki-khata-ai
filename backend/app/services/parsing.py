@@ -13,7 +13,7 @@ from collections.abc import Callable
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
-from app.llm import ChatMessage, LLMClient
+from app.llm import ChatMessage, LLMBusyError, LLMClient
 from app.models import Customer
 from app.schemas import (
     CustomerCandidate,
@@ -41,6 +41,9 @@ logger = logging.getLogger(__name__)
 
 # The most an unverified amount is trusted (see `_sanity_check`).
 UNVERIFIED_AMOUNT_CONFIDENCE = 0.5
+
+# Shown on the card when the AI was rate limited or too slow and the rules read the sentence.
+AI_BUSY_NOTICE = "AI ekhon byasto, tai AI chhara pora hoyeche. Save korar age ekbar mile nin."
 
 
 class LLMOutputError(Exception):
@@ -156,8 +159,18 @@ def _match_customer(db: Session, shop_id: int, name: str) -> CustomerMatchResult
 def preview(db: Session, llm: LLMClient, shop_id: int, raw_text: str) -> ParsePreview:
     """Parse the sentence and find each entry's customer. Saves nothing."""
     get_shop(db, shop_id)  # 404 before spending an LLM call
+    notice = None
+    try:
+        parsed_entries = parse_entries_with_llm(llm, raw_text)
+    except LLMBusyError:
+        # Rate limited or timed out: read this sentence with the rules instead of failing.
+        from app.llm.rule_based import RuleBasedLLMClient
+
+        logger.warning("The AI is busy; this sentence is read with the rule-based parser")
+        llm, notice = RuleBasedLLMClient(), AI_BUSY_NOTICE
+        parsed_entries = parse_entries_with_llm(llm, raw_text)
     entries = []
-    for parsed in parse_entries_with_llm(llm, raw_text):
+    for parsed in parsed_entries:
         parsed, warnings = _sanity_check(raw_text, parsed)
         match = _match_customer(db, shop_id, parsed.customer_name)
         if match.status == MatchStatus.FUZZY:
@@ -174,6 +187,7 @@ def preview(db: Session, llm: LLMClient, shop_id: int, raw_text: str) -> ParsePr
         entries=entries,
         parser=llm.parser,
         model=llm.model,
+        notice=notice,
     )
 
 

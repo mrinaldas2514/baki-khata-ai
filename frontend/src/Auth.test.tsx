@@ -3,7 +3,7 @@ import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
-import { CONSENT_VERSION } from './config'
+import { CONSENT_VERSION, DEMO_LOGIN } from './config'
 import { endSession, getSession, setSession } from './session'
 import { strings } from './strings'
 import { LOGIN, LOGOUT, RECENT, REGISTER, TEST_SESSION, TRANSCRIBE_STATUS, authResult, mockApi } from './test/mockApi'
@@ -84,6 +84,23 @@ describe('login', () => {
     await user.type(screen.getByLabelText(strings.auth.password), 'whatever1')
     await user.click(screen.getByRole('button', { name: strings.auth.loginButton }))
     expect(await screen.findByText(strings.errors.rateLimited(42))).toBeInTheDocument()
+  })
+
+  it('shows the demo login only when VITE_SHOW_DEMO_LOGIN=true', () => {
+    mockApi({})
+    const { unmount } = render(<App />)
+    expect(screen.queryByTestId('demo-login')).not.toBeInTheDocument()
+    unmount()
+
+    vi.stubEnv('VITE_SHOW_DEMO_LOGIN', 'true')
+    try {
+      render(<App />)
+      expect(screen.getByTestId('demo-login')).toHaveTextContent(
+        `${strings.auth.demoLogin}: ${DEMO_LOGIN.phone} / ${DEMO_LOGIN.password}`,
+      )
+    } finally {
+      vi.unstubAllEnvs()
+    }
   })
 })
 

@@ -44,7 +44,7 @@ Banglish, Bangla script or English, and the app turns it into a structured entry
 |---|---|
 | **Backend** | Python 3.13, FastAPI, SQLAlchemy 2, Alembic, Pydantic 2, PostgreSQL (SQLite for development), argon2id + JWT, Groq SDK (LLM + Whisper), RapidFuzz |
 | **Frontend** | React 19, TypeScript, Vite, Tailwind CSS 4, Web Speech API / MediaRecorder, IndexedDB, a hand-written service worker |
-| **Quality** | pytest (737 tests, SQLite and PostgreSQL), Vitest + Testing Library (426 tests), ruff, oxlint, Prettier, axe-core audits, an LLM evaluation harness |
+| **Quality** | pytest (742 tests, SQLite and PostgreSQL), Vitest + Testing Library (428 tests), ruff, oxlint, Prettier, axe-core audits, an LLM evaluation harness |
 | **Delivery** | Docker, docker compose, GitHub Actions, Render (API + PostgreSQL), Vercel (static PWA) |
 
 ## Architecture
@@ -90,23 +90,33 @@ the shopkeeper confirms or fixes it, and `/parse/confirm` saves it with the orig
 `python -m eval.run_eval --parser both` (in `backend/`) runs 186 labelled sentences in 14
 categories through the same steps as `/parse` (see [Accuracy evaluation](#accuracy-evaluation)).
 A sentence counts as right only if every entry has the right name, amount, type and item.
+Results of a local run on 2026-10-29, the LLM on Groq's free tier:
 
-| Metric | Rule-based parser (AI off) | LLM (`openai/gpt-oss-120b`) |
+| Metric | Rule-based parser (AI off) | LLM (`openai/gpt-oss-120b` on Groq) |
 |---|---|---|
-| **All fields correct, per sentence** | **90.3%** (168/186) | *run `--parser llm` with a key* |
-| Customer name | 97.7% | – |
-| Amount | 97.7% | – |
-| Type (baki / joma) | 95.5% | – |
-| Item | 90.9% | – |
-| Non-transactions refused | 87.5% (21/24) | – |
-| Latency per sentence, average / p95 | 0.1 ms / 0.2 ms | – |
+| **All fields correct, per sentence** | **90.3%** (168/186) | **96.8%** (180/186) |
+| Customer name | 97.7% | 100.0% |
+| Amount | 97.7% | 99.4% |
+| Type (baki / joma) | 95.5% | 99.4% |
+| Item | 90.9% | 97.7% |
+| Non-transactions refused | 87.5% (21/24) | 100.0% (24/24) |
+| Latency per sentence, average / p95 | 0.0 ms / 0.1 ms | 670 ms / 1025 ms |
+
+Sentence by sentence, the LLM gets **17** right that the rules miss, and the rules get **5** right
+that the LLM misses.
+
+**The set is synthetic**: the sentences were written to cover the categories above, not
+collected from shops. Real shopkeeper sentences (typed and spoken, `backend/eval/my_sentences.csv`)
+are the next step, and the numbers may well drop on them.
 
 Where the rules fall short (full list in
 [`backend/eval/results/2026-10-28_rules_rule-based.md`](backend/eval/results/2026-10-28_rules_rule-based.md)):
 typos in keywords (*dlo*, *jma*, *shod*: 60%), several customers without commas
 (*"Hasan paid 500 and Rina took 200"*: 75% for multi-entry), verbs it doesn't know (*diye gelo*),
 and sentences with a number that aren't transactions (*"chal er dam 70 taka kg"*). Those are what
-the LLM is for; the evaluation shows by how much once it's run with a key.
+the LLM is for, at the cost of ~0.7 s and a network call per sentence. The rules stay as the
+fallback: with AI off, offline, and when the AI is rate limited or slow (see
+[Rate limits](#rate-limits)).
 
 ## Design decisions and trade-offs
 
@@ -171,8 +181,8 @@ This repository contains:
   customer's khata) and **Dashboard** (what's owed, today's money, old baki), plus **Settings**
   (turn the AI off, download everything as CSV, log out, delete the account).
 
-**Demo login** (after `python -m app.seed`, see [Running it locally](#running-it-locally-macos-step-by-step)):
-mobile **`01700000000`**, password **`demo1234`**.
+**Demo login** (after `python -m app.seed`, see [Running it locally](#running-it-locally-macos-step-by-step),
+or on a deployed demo with `SEED_DEMO_ON_START=true`): mobile **`01700000000`**, password **`demo1234`**.
 
 ## How it works
 
@@ -476,6 +486,13 @@ reset when it restarts. Behind a proxy, set `FORWARDED_ALLOW_IPS` so the real cl
 one. For more, put limits in the proxy too (e.g. nginx `limit_req`). Change them with the
 `RATE_LIMIT_*` settings.
 
+**Groq's own limits.** Groq's free tier allows about 8,000 tokens a minute, which the
+evaluation ran into (429s). When Groq answers `429` or doesn't answer within
+`LLM_TIMEOUT_SECONDS`, `/parse` doesn't fail: that sentence is read by the rule-based parser,
+the card says **AI chhara** (`"parser": "rules"`) and shows the note *AI ekhon byasto, tai AI
+chhara pora hoyeche. Save korar age ekbar mile nin.* (`"notice"` in the answer). Other Groq
+errors (bad key, retired model) are still a `503`, so a broken setup isn't hidden.
+
 ## Running it locally (macOS, step by step)
 
 You need two terminal windows: one for the backend, one for the frontend. No API key is needed:
@@ -690,7 +707,8 @@ pip and npm downloads are cached between runs (keyed on the requirements files a
 
 The backend and its PostgreSQL database run on [Render](https://render.com) (`render.yaml`, a
 "blueprint"); the frontend is a static site on [Vercel](https://vercel.com)
-(`frontend/vercel.json`). Both have free plans.
+(`frontend/vercel.json`). Both have free plans. **First time? Follow [DEPLOY.md](DEPLOY.md)**:
+click by click, every variable, free-plan limits and troubleshooting. Below is the summary.
 
 ### 1. Backend and database on Render
 
@@ -703,7 +721,9 @@ The backend and its PostgreSQL database run on [Render](https://render.com) (`re
    A failed migration stops the deploy instead of starting on a half-migrated database. Render
    checks `GET /health`, which also checks the database.
 4. Open `https://baki-khata-api.onrender.com/health`: `{"status": "ok", "database": "ok"}`.
-5. Optional, demo data: in the service's **Shell** tab, `python -m app.seed`.
+5. Demo data: the blueprint sets `SEED_DEMO_ON_START=true`, so the demo login exists after the
+   first start (free web services have no **Shell** tab to run `python -m app.seed`). Set it to
+   `false` for a real shop.
 
 Environment variables of the **web service** (all set by the blueprint except where noted):
 
@@ -717,6 +737,7 @@ Environment variables of the **web service** (all set by the blueprint except wh
 | `GROQ_MODEL` | `openai/gpt-oss-120b` | Change here if Groq retires the model (the backend logs it at startup). |
 | `APP_TIMEZONE` | `Asia/Dhaka` | `Asia/Kolkata` for India. |
 | `FORWARDED_ALLOW_IPS` | `*` | Render's proxy is in front, so the rate limits use the client IP it forwards. |
+| `SEED_DEMO_ON_START` | `true` | Creates the demo login at startup if it's missing. `false` for a real shop. |
 | `PYTHON_VERSION` | `3.13` | |
 | `PORT` | set by Render | `start.sh` listens on it. |
 
@@ -740,6 +761,7 @@ memory per process.
 | Variable | Value | Notes |
 |---|---|---|
 | `VITE_API_URL` | `https://baki-khata-api.onrender.com` | The backend's address, no trailing `/`. Read at **build** time: redeploy after changing it. |
+| `VITE_SHOW_DEMO_LOGIN` | `true` (demo site only) | Shows the demo login on the login screen. Build time too. |
 
 `vercel.json` sends every path to `index.html` (the app's own routing), caches `/assets/*`
 forever (their names change with every build), never caches the service worker (`/sw.js`), and
@@ -1039,6 +1061,7 @@ Don't commit `.env`; it's already in `.gitignore`.
 | `GROQ_STT_MODEL` | `whisper-large-v3` | Groq speech-to-text model for `POST /transcribe` (`whisper-large-v3-turbo` is faster and cheaper, a little weaker on Bangla) |
 | `STT_MAX_AUDIO_BYTES` | `1000000` | Largest recording `POST /transcribe` accepts (413 above it) |
 | `STT_MAX_AUDIO_SECONDS` | `30` | Longest recording; the app stops recording at this point too |
+| `SEED_DEMO_ON_START` | `false` | `true`: create the demo shop and login (`01700000000` / `demo1234`) at startup if they don't exist. Never resets them. For a public demo only |
 | `PHONE_COUNTRY_CODE` | `880` | Country calling code for WhatsApp links of phones saved without one (from before numbers were normalized; `91` for India) |
 
 ### Switching to PostgreSQL
@@ -1062,6 +1085,7 @@ From `frontend/.env` (see `frontend/.env.example`). Vite reads it when `npm run 
 | Variable | Default | Purpose |
 |---|---|---|
 | `VITE_API_URL` | `http://localhost:8000` | Where the backend runs |
+| `VITE_SHOW_DEMO_LOGIN` | `false` | `true`: the login screen shows "Demo login: 01700000000 / demo1234" (public demo only) |
 
 There's no shop setting: the app uses the shop of whoever logs in. (`VITE_SHOP_ID` is gone; delete
 it from an old `frontend/.env`.)
@@ -1353,7 +1377,8 @@ commit). A failed save doesn't use the key up. Keys are forgotten after 30 days.
 
 **Errors**: `422` the sentence has no name/amount, or invalid input; `502` the model gave an
 invalid answer twice; `503` `LLM_PROVIDER=groq` without a `GROQ_API_KEY`, or Groq is
-unreachable / rejected the request (details are logged, not returned).
+unreachable / rejected the request (details are logged, not returned). A Groq `429` or timeout
+is not an error: the rules read the sentence and `notice` says so (see [Rate limits](#rate-limits)).
 
 ### Swapping the LLM provider
 
@@ -1386,13 +1411,13 @@ unit tests; all of them are in the evaluation set too.)
 
 ```bash
 cd backend
-pytest              # 737 tests
+pytest              # 742 tests
 ruff check . && ruff format --check .
 ```
 
 ```bash
 cd frontend
-npm test            # Vitest + React Testing Library, 426 tests (npm run test:watch to re-run on save)
+npm test            # Vitest + React Testing Library, 428 tests (npm run test:watch to re-run on save)
 npm run typecheck   # TypeScript
 npm run lint        # oxlint
 npm run format      # Prettier
