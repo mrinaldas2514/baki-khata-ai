@@ -99,6 +99,8 @@ export interface ParsePreview extends EntryPreview {
   parser: ParserKind
   /** e.g. "openai/gpt-oss-120b", or "rule-based". */
   model: string
+  /** A note for the shopkeeper, e.g. the AI was busy and the rules read it ("AI chhara"). */
+  notice?: string | null
 }
 
 export interface Transaction {

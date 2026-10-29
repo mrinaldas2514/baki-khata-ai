@@ -57,6 +57,17 @@ describe('who read the sentence', () => {
     expect(label).toHaveTextContent(strings.parser.rules)
     expect(label).toHaveAttribute('title', strings.parser.rulesTitle)
   })
+
+  it("shows the server's note when the AI was busy and the rules read it", async () => {
+    const notice = 'AI ekhon byasto, tai AI chhara pora hoyeche. Save korar age ekbar mile nin.'
+    mockApi({ [RECENT]: { body: [] }, [PARSE]: { body: preview({ parser: 'rules', notice }) } })
+    await submit('salma apa pach sho taka baki, dal r tel')
+
+    expect(
+      within(await screen.findByRole('region', { name: strings.confirmTitle })).getByTestId('parser-label'),
+    ).toHaveTextContent(strings.parser.rules)
+    expect(screen.getByText(notice)).toBeInTheDocument()
+  })
 })
 
 describe('matched customer', () => {

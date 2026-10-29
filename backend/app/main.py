@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import Engine, text
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.auth import NotAuthenticatedError
 from app.config import get_settings
@@ -74,6 +74,8 @@ def create_app(
     async def lifespan(app: FastAPI):
         if check_migrations:
             check_schema(engine)
+        if settings.seed_demo_on_start:
+            _seed_demo(engine)
         if llm_client is None or stt_client is None:
             # Logs a clear error if Groq has retired (or never had) a configured model.
             start_model_check(settings)
@@ -139,6 +141,22 @@ def create_app(
 
     _register_error_handlers(app)
     return app
+
+
+def _seed_demo(engine: Engine) -> None:
+    """SEED_DEMO_ON_START: the demo shop and login, only if they don't exist yet."""
+    from app import seed
+
+    with Session(engine, expire_on_commit=False) as db:
+        existed = seed.demo_user(db) is not None
+        shop = seed.seed(db)
+    # A warning: anyone can log in to it, and INFO isn't shown by default.
+    if existed:
+        logger.warning(
+            "SEED_DEMO_ON_START: the demo shop %d already exists, left as it is", shop.id
+        )
+    else:
+        logger.warning("SEED_DEMO_ON_START: created the demo shop %d", shop.id)
 
 
 def _register_error_handlers(app: FastAPI) -> None:

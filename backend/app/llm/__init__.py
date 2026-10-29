@@ -7,6 +7,7 @@ from fastapi import Request
 from app.config import Settings, get_settings
 from app.llm.base import (
     ChatMessage,
+    LLMBusyError,
     LLMClient,
     LLMNotConfiguredError,
     LLMProviderError,
@@ -15,6 +16,7 @@ from app.llm.base import (
 
 __all__ = [
     "ChatMessage",
+    "LLMBusyError",
     "LLMClient",
     "LLMNotConfiguredError",
     "LLMProviderError",

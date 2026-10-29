@@ -31,3 +31,7 @@ class LLMNotConfiguredError(Exception):
 
 class LLMProviderError(Exception):
     """The provider failed: network error, timeout, bad key, rate limit, server error."""
+
+
+class LLMBusyError(LLMProviderError):
+    """The provider is rate limited (429) or timed out: worth reading this sentence with the rules."""

@@ -44,6 +44,10 @@ services:
       # Render's proxy is in front of the service: trust its X-Forwarded-For for client IPs.
       - key: FORWARDED_ALLOW_IPS
         value: "*"
+      # Public demo: makes the demo login (01700000000 / demo1234) at startup if it's missing.
+      # Free web services have no Shell to run `python -m app.seed`. "false" for a real shop.
+      - key: SEED_DEMO_ON_START
+        value: "true"
 
 databases:
   - name: baki-khata-db

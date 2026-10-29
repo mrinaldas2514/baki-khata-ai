@@ -70,6 +70,11 @@ class ParsePreview(EntryPreview):
         "(AI turned off in Settings, or no AI key on the server)."
     )
     model: str = Field(description='The model id, e.g. "openai/gpt-oss-120b", or "rule-based"')
+    notice: str | None = Field(
+        default=None,
+        description="A note for the shopkeeper, e.g. the AI was busy (rate limited or timed out) "
+        'and the rules read this sentence instead (parser "rules").',
+    )
 
 
 class EntryTimingIn(BaseModel):

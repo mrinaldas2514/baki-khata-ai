@@ -78,3 +78,26 @@ def test_seeded_shop_works_with_the_demo_parser(engine, monkeypatch):
     assert salma.json()["match"]["status"] == "exact"
     assert salma.json()["match"]["customer"]["balance"] == 200
     assert new.json()["match"]["status"] == "new"
+
+
+def test_seed_demo_on_start_creates_the_demo_login_once(engine, monkeypatch, fake_llm, fake_stt):
+    """SEED_DEMO_ON_START=true: the demo login works on a fresh database, and restarts keep it."""
+    monkeypatch.setenv("SEED_DEMO_ON_START", "true")
+    monkeypatch.setattr("app.main.get_settings", lambda: Settings(_env_file=None))
+    for _restart in range(2):
+        with TestClient(create_app(engine, llm_client=fake_llm, stt_client=fake_stt)) as client:
+            login = client.post(
+                "/auth/login", json={"login": DEMO_PHONE, "password": DEMO_PASSWORD}
+            )
+            assert login.status_code == 200, login.text
+    with Session(engine) as db:
+        assert db.scalar(select(func.count()).select_from(Shop)) == 1
+        assert db.scalar(select(func.count()).select_from(Transaction)) == len(TRANSACTIONS)
+
+
+def test_no_demo_shop_unless_asked(engine, monkeypatch, fake_llm, fake_stt):
+    monkeypatch.setattr("app.main.get_settings", lambda: Settings(_env_file=None))
+    with TestClient(create_app(engine, llm_client=fake_llm, stt_client=fake_stt)):
+        pass
+    with Session(engine) as db:
+        assert db.scalar(select(func.count()).select_from(Shop)) == 0

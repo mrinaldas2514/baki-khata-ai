@@ -197,7 +197,8 @@ export function HisabScreen({ active, aiEnabled = true }: { active: boolean; aiE
     }
     goTo({ kind: 'parsing' })
     try {
-      showPreview(await api.parse(sentence), null)
+      const preview = await api.parse(sentence)
+      showPreview(preview, preview.notice ?? null)
     } catch (error) {
       if (error instanceof ApiError && error.kind === 'network') {
         readOnPhone(sentence, strings.offline.readAfterNetworkError)
